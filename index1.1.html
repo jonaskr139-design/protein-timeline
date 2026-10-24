@@ -1,0 +1,1818 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protein Timeline</title>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --paper: #F2F4F8;
+  --surface: #FFFFFF;
+  --ink: #18203A;
+  --muted: #6B7390;
+  --line: #DCE1EA;
+  --good: #1FA971;
+  --bad: #E5484D;
+  --high: #E23D6D;
+  --gold: hsl(42 90% 58%);
+  --strahl: linear-gradient(90deg, hsl(42 90% 58%), hsl(14 90% 58%), hsl(343 80% 56%));
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  font-family: "Bricolage Grotesque", system-ui, -apple-system, "Segoe UI", sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; cursor: pointer; border: none; }
+button:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid currentColor; outline-offset: 3px; }
+[hidden] { display: none !important; }
+
+.btn {
+  background: var(--ink); color: #fff;
+  padding: 14px 22px; border-radius: 999px;
+  font-weight: 600; font-size: 1rem;
+  transition: transform .15s;
+}
+.btn:active { transform: scale(.97); }
+.btn.outline { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink); }
+.btn.big { width: 100%; padding: 18px; font-size: 1.1rem; }
+
+/* ---------- Zeitstrahl-Grundelemente ---------- */
+.bar { height: 10px; border-radius: 999px; background: var(--strahl); }
+.scale { display: flex; justify-content: space-between; font-size: .85rem; color: var(--muted); margin-top: 8px; }
+
+/* ---------- Start ---------- */
+.setup, .end { min-height: 100vh; display: grid; place-items: center; padding: 32px 20px; }
+.setup-inner { width: 100%; max-width: 540px; }
+.logo {
+  font-size: clamp(3.2rem, 12vw, 5.8rem);
+  line-height: .88; font-weight: 800; letter-spacing: -.045em;
+  margin: 0 0 18px;
+}
+.lead { font-size: 1.15rem; line-height: 1.5; color: var(--muted); margin: 0 0 28px; max-width: 42ch; }
+.rules-toggle {
+  display: inline-grid; place-items: center; vertical-align: -6px;
+  width: 26px; height: 26px; margin-left: 6px; border-radius: 50%;
+  background: transparent; color: var(--muted);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  transition: transform .25s, color .2s, box-shadow .2s;
+}
+.rules-toggle:hover { color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--muted); }
+.rules-toggle svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.rules-toggle[aria-expanded="true"] { transform: rotate(180deg); }
+
+.rules { margin: -12px 0 30px; padding: 2px 0 2px 18px; border-left: 3px solid var(--line); line-height: 1.55; animation: fade .25s ease; }
+.rules h3 { font-size: 1rem; margin: 16px 0 4px; }
+.rules h3:first-child { margin-top: 0; }
+.rules p { margin: 0 0 6px; color: var(--muted); }
+.rules ul { margin: 0 0 6px; padding-left: 1.2em; color: var(--muted); }
+.rules li { margin-bottom: 4px; }
+.formel { display: inline-block; background: var(--surface); border-radius: 10px; padding: 6px 12px; color: var(--ink); font-weight: 600; margin: 4px 0 8px; }
+@keyframes fade { from { opacity: 0; transform: translateY(-6px); } }
+
+.preview { margin: 0 0 30px; }
+.preview-items { display: flex; justify-content: space-between; font-size: 2rem; padding: 0 2px 10px; }
+
+.field { margin-bottom: 22px; }
+.field-label { display: block; font-weight: 600; margin-bottom: 10px; }
+.add-row { display: flex; gap: 8px; }
+.add-row input {
+  flex: 1; min-width: 0; padding: 14px 18px; border-radius: 999px;
+  border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  font: inherit; font-size: 1rem;
+}
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 2px solid var(--line);
+  padding: 6px 6px 6px 16px; border-radius: 999px; font-weight: 600;
+}
+.chip button { width: 28px; height: 28px; border-radius: 50%; background: var(--paper); color: var(--ink); font-size: 1rem; line-height: 1; }
+.stepper {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--surface); border: 2px solid var(--line); border-radius: 999px; padding: 4px;
+}
+.stepper button { width: 42px; height: 42px; border-radius: 50%; background: var(--paper); color: var(--ink); font-size: 1.3rem; }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper output { min-width: 48px; text-align: center; font-size: 1.25rem; font-weight: 800; }
+.stepper.small button { width: 34px; height: 34px; font-size: 1.1rem; }
+.stepper.small output { min-width: 0; padding: 0 8px; font-size: 1rem; font-weight: 600; white-space: nowrap; }
+.error { color: var(--bad); font-weight: 600; margin: 0 0 14px; }
+
+/* ---------- Spiel ---------- */
+.game { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 20px; }
+.brand { font-weight: 800; font-size: 1.3rem; letter-spacing: -.03em; }
+.scoreboard { display: flex; gap: 8px; flex-wrap: wrap; }
+.pchip {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface); border: 2px solid var(--line);
+  border-radius: 999px; padding: 5px 5px 5px 14px;
+  transition: background .2s, color .2s;
+}
+.pchip.active { background: var(--ink); color: #fff; border-color: var(--ink); }
+.pchip.out { opacity: .4; }
+.pname { font-weight: 600; }
+.lives { display: flex; gap: 3px; }
+.lives i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.lives i.on { background: var(--high); }
+.pts {
+  min-width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--paper); color: var(--ink); font-weight: 800; font-size: .95rem;
+}
+
+.board { flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 0; padding-bottom: 8px; }
+.track { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; }
+.track-inner { position: relative; width: max-content; min-width: 100%; padding: 0 40px; }
+.cards { display: flex; align-items: flex-end; gap: 14px; padding: 16px 0 46px; min-height: 270px; }
+.track-inner .bar { position: absolute; left: 20px; right: 20px; bottom: 12px; }
+.board .scale { padding: 0 40px; }
+
+.tcard {
+  position: relative; flex: 0 0 150px; min-height: 190px;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  text-align: left; color: var(--ink);
+  background: var(--surface); border-radius: 18px; padding: 14px;
+  border-top: 6px solid var(--c);
+  box-shadow: 0 12px 26px -16px rgba(24, 32, 58, .45);
+}
+.tcard.wrong { background: #FFF6F6; }
+.tcard::after {
+  content: ""; position: absolute; left: 50%; top: 100%;
+  width: 2px; height: 20px; background: var(--ink); opacity: .2; transform: translateX(-50%);
+}
+.tcard::before {
+  content: ""; position: absolute; left: 50%; top: calc(100% + 19px); z-index: 1;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--surface); border: 3px solid var(--ink); transform: translateX(-50%);
+}
+.tcard:hover .tname { text-decoration: underline; text-underline-offset: 3px; }
+.tcard .emoji { font-size: 2rem; line-height: 1; }
+.tname { font-weight: 600; font-size: .98rem; line-height: 1.2; }
+.tval { font-size: .8rem; color: var(--muted); }
+.tval b { font-size: 1.4rem; font-weight: 800; color: var(--ink); margin-right: 3px; }
+.tby {
+  margin-top: auto; display: inline-flex; align-items: center; gap: 5px; max-width: 100%;
+  font-size: .78rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+  background: var(--paper); color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tby.ok { background: #E1F5EC; color: #11734B; }
+.tby.no { background: #FDE4E5; color: #B3242A; }
+.tcard.good { box-shadow: 0 0 0 3px var(--good), 0 12px 26px -16px rgba(24, 32, 58, .45); animation: pop .45s ease; }
+.tcard.bad  { box-shadow: 0 0 0 3px var(--bad),  0 12px 26px -16px rgba(24, 32, 58, .45); animation: shake .55s ease; }
+@keyframes pop { 0% { transform: scale(.6); opacity: 0; } 70% { transform: scale(1.05); } 100% { transform: none; } }
+@keyframes shake { 0% { transform: scale(.6); opacity: 0; } 55% { transform: translateX(-6px); } 80% { transform: translateX(6px); } 100% { transform: none; } }
+
+.gap {
+  flex: 0 0 150px; height: 190px; align-self: flex-end;
+  border: 2.5px dashed var(--ink); border-radius: 18px; opacity: .4;
+  animation: grow .18s ease-out;
+}
+@keyframes grow { from { flex-basis: 0; opacity: 0; } }
+
+.hand-area, .sheet { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 8px 20px 28px; }
+.turn { margin: 0; font-size: 1.45rem; font-weight: 800; letter-spacing: -.02em; }
+.hand-card {
+  width: min(300px, 100%);
+  display: flex; flex-direction: column; gap: 6px;
+  background: var(--surface); border: 2px solid var(--ink); border-radius: 26px;
+  padding: 20px 22px;
+  box-shadow: 0 18px 40px -22px rgba(24, 32, 58, .55);
+  cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.hand-card .emoji { font-size: 2.6rem; line-height: 1; }
+.hand-card strong { font-size: 1.25rem; line-height: 1.2; }
+.ingr { color: var(--muted); font-size: .9rem; line-height: 1.4; }
+.hand-card.lifted { opacity: .25; }
+.hint { margin: 0; color: var(--muted); font-size: .9rem; text-align: center; }
+.ghost {
+  position: fixed; left: 0; top: 0; z-index: 100;
+  pointer-events: none; cursor: grabbing;
+  box-shadow: 0 30px 60px -20px rgba(24, 32, 58, .6);
+}
+
+.sheet-inner {
+  width: min(560px, 100%);
+  background: var(--surface); border-radius: 26px; padding: 22px 24px;
+  border-left: 8px solid var(--good);
+  animation: up .3s ease;
+}
+.sheet.bad .sheet-inner { border-left-color: var(--bad); }
+.sheet h2 { margin: 0 0 6px; font-size: 1.35rem; letter-spacing: -.02em; }
+.sheet p { margin: 0 0 18px; color: var(--muted); line-height: 1.5; }
+.sheet-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.sheet-actions .btn { flex: 1 1 180px; }
+@keyframes up { from { transform: translateY(18px); opacity: 0; } }
+
+/* ---------- Rezept ---------- */
+.modal { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(24, 32, 58, .55); backdrop-filter: blur(4px); }
+.modal-panel {
+  position: relative; width: min(640px, 100%);
+  max-height: calc(100vh - 32px); overflow-y: auto;
+  background: var(--surface); border-radius: 26px;
+  animation: up .3s ease;
+}
+.close {
+  position: absolute; top: 14px; right: 14px; z-index: 2;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: rgba(255, 255, 255, .92); color: var(--ink); font-size: 1.4rem;
+}
+.hero {
+  position: relative; height: 250px; overflow: hidden;
+  background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.45), transparent 60%), var(--c);
+}
+.hero-media { width: 100%; height: 100%; display: grid; place-items: center; }
+.hero-media img { width: 100%; height: 100%; object-fit: cover; }
+.hero-emoji { font-size: 6.5rem; }
+.hero-badge {
+  position: absolute; left: 20px; bottom: 18px;
+  background: var(--surface); color: var(--ink);
+  padding: 8px 16px; border-radius: 999px; font-size: .92rem;
+  box-shadow: 0 8px 20px -10px rgba(24, 32, 58, .5);
+}
+.hero-badge b { font-weight: 800; font-size: 1.05rem; }
+.modal-body { padding: 26px 28px 32px; }
+.modal-body h2 { margin: 0 0 20px; font-size: 2rem; line-height: 1.08; letter-spacing: -.03em; }
+
+.meta {
+  list-style: none; margin: 0 0 26px; padding: 0 0 22px;
+  display: flex; flex-wrap: wrap; gap: 16px 28px;
+  border-bottom: 1px solid var(--line);
+}
+.meta li { display: flex; align-items: center; gap: 10px; }
+.meta svg { width: 22px; height: 22px; flex: none; stroke: var(--ink); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.meta svg .on { fill: var(--ink); }
+.meta span { display: block; font-size: .76rem; color: var(--muted); line-height: 1.2; }
+.meta strong { display: block; font-size: 1rem; line-height: 1.25; }
+
+.modal-body h3 { font-size: 1.15rem; margin: 0; }
+.ingr-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.ingr-list { list-style: none; padding: 0; margin: 0 0 30px; }
+.ingr-list li { display: grid; grid-template-columns: 110px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ingr-list b { font-weight: 600; text-align: right; }
+.steps-title { margin-bottom: 12px !important; }
+.steps { list-style: none; counter-reset: schritt; margin: 0; padding: 0; }
+.steps li { counter-increment: schritt; position: relative; padding: 0 0 18px 46px; line-height: 1.6; }
+.steps li::before {
+  content: counter(schritt); position: absolute; left: 0; top: -2px;
+  width: 30px; height: 30px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--ink); color: #fff; font-weight: 800; font-size: .9rem;
+}
+.orig { display: inline-block; margin-top: 8px; color: var(--ink); font-weight: 600; text-underline-offset: 3px; }
+
+/* ---------- Ende ---------- */
+.end { position: relative; overflow: hidden; background: var(--ink); color: #fff; }
+#fireworks { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.end-inner { position: relative; z-index: 1; width: 100%; max-width: 560px; text-align: center; }
+.end h1 { font-size: clamp(2.8rem, 11vw, 5rem); line-height: .92; letter-spacing: -.045em; margin: 0 0 12px; }
+.winner-sub { margin: 0 0 40px; font-size: 1.15rem; color: rgba(255, 255, 255, .7); }
+
+.podium { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin: 0 0 30px; }
+.pod { flex: 0 1 150px; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.crown { font-size: 2.4rem; line-height: 1; animation: float 2.4s ease-in-out infinite; }
+@keyframes float { 50% { transform: translateY(-6px) rotate(-6deg); } }
+.avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: #fff; color: var(--ink); font-weight: 800; font-size: 1.4rem;
+}
+.p1 .avatar { width: 74px; height: 74px; font-size: 1.9rem; box-shadow: 0 0 0 4px var(--gold), 0 0 40px hsla(42, 90%, 58%, .55); }
+.pod-name { font-weight: 600; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pod-pts { font-size: .9rem; color: rgba(255, 255, 255, .65); margin-bottom: 4px; }
+.block {
+  width: 100%; border-radius: 16px 16px 0 0;
+  display: grid; place-items: start center; padding-top: 12px;
+  font-size: 2rem; font-weight: 800; color: var(--ink);
+  transform-origin: bottom; animation: rise .8s cubic-bezier(.2, .8, .2, 1) both;
+}
+.p1 .block { height: 150px; background: var(--gold); animation-delay: .35s; }
+.p2 .block { height: 105px; background: #D7DCE6; animation-delay: .15s; }
+.p3 .block { height: 75px; background: hsl(20 75% 60%); }
+@keyframes rise { from { transform: scaleY(0); } }
+
+.ranking { list-style: none; padding: 0; margin: 0 0 30px; text-align: left; }
+.ranking li { display: flex; align-items: center; gap: 14px; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, .14); }
+.place { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .3); font-weight: 800; font-size: .9rem; }
+.rname { flex: 1; font-weight: 600; }
+.rpts { color: rgba(255, 255, 255, .65); }
+.end .btn { background: #fff; color: var(--ink); }
+
+@media (max-width: 600px) {
+  .tcard, .gap { flex-basis: 130px; }
+  .track-inner, .board .scale { padding-left: 20px; padding-right: 20px; }
+  .modal-body { padding: 22px 20px 28px; }
+  .ingr-list li { grid-template-columns: 90px 1fr; }
+  .meta { gap: 14px 20px; }
+  .p1 .block { height: 120px; } .p2 .block { height: 85px; } .p3 .block { height: 60px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+</style>
+
+<!-- ========== START ========== -->
+<main id="setup" class="setup">
+  <div class="setup-inner">
+    <h1 class="logo">Protein<br>Timeline</h1>
+    <p class="lead">Ordnet Gerichte danach, wie viel Protein sie pro 100 kcal liefern. Wer am besten schätzt, gewinnt.<button id="rulesToggle" class="rules-toggle" aria-expanded="false" aria-controls="rules" aria-label="Spielregeln anzeigen" title="Spielregeln"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></button></p>
+
+    <div id="rules" class="rules" hidden>
+      <h3>Worum geht’s?</h3>
+      <p>Jedes Gericht hat einen Wert: wie viel Gramm Protein es pro 100 kcal liefert. Ihr legt die Gerichte gemeinsam auf einem Zeitstrahl in die richtige Reihenfolge, links wenig Protein, rechts viel.</p>
+
+      <h3>So wird der Wert berechnet</h3>
+      <p>Protein in Gramm geteilt durch Kalorien, mal 100. Ein Gericht mit 500 kcal und 40 g Protein ergibt:</p>
+      <span class="formel">40 ÷ 500 × 100 = 8 g Protein pro 100 kcal</span>
+      <p>Je höher der Wert, desto mehr Protein bekommst du für die gleiche Menge Kalorien. Wie groß die Portion ist, spielt dabei keine Rolle.</p>
+
+      <h3>Ein Zug</h3>
+      <ul>
+        <li>Zu Beginn liegt ein zufälliges Gericht mit seinem Wert offen auf dem Zeitstrahl.</li>
+        <li>Wer dran ist, bekommt ein neues Gericht mit Namen und Zutaten, aber ohne Nährwerte.</li>
+        <li>Zieh die Karte an die Stelle, an die sie deiner Meinung nach gehört: zwischen zwei Gerichte, ganz an den Anfang oder ans Ende.</li>
+        <li>Sobald du loslässt, wird der Wert aufgedeckt. Danach ist die nächste Person dran.</li>
+      </ul>
+
+      <h3>Punkte und Leben</h3>
+      <ul>
+        <li>Richtig eingeordnet: 1 Punkt.</li>
+        <li>Falsch eingeordnet: 1 Leben weniger. Die Karte wandert an die richtige Stelle und bleibt dort liegen.</li>
+        <li>Jede Person startet mit 3 Leben. Wer keine mehr hat, scheidet aus, behält aber die gesammelten Punkte.</li>
+      </ul>
+
+      <h3>Spielende</h3>
+      <p>Das Spiel endet, wenn alle ihre Züge gemacht haben, alle ausgeschieden sind oder keine Gerichte mehr übrig sind. Wer dann die meisten Punkte hat, gewinnt. Bei Gleichstand gibt es ein Unentschieden.</p>
+
+      <h3>Wer hat was gelegt?</h3>
+      <p>Unter jeder Karte steht dauerhaft, wer sie gelegt hat. Grün mit Haken heißt richtig, Rot mit Kreuz heißt falsch.</p>
+
+      <h3>Rezepte</h3>
+      <p>Tippe auf eine Karte im Zeitstrahl, um das Rezept zu öffnen. Dort kannst du die Portionen anpassen, und alle Mengen rechnen sich automatisch um.</p>
+    </div>
+
+    <div class="preview" aria-hidden="true">
+      <div class="preview-items"><span>🍟</span><span>🍝</span><span>🍛</span><span>🍳</span><span>🍗</span><span>🍤</span></div>
+      <div class="bar"></div>
+      <div class="scale"><span>Wenig Protein</span><span>Viel Protein</span></div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="nameInput">Wer spielt mit?</label>
+      <div class="add-row">
+        <input id="nameInput" placeholder="Name eingeben" maxlength="16" autocomplete="off">
+        <button id="addBtn" class="btn">Hinzufügen</button>
+      </div>
+      <div id="playerChips" class="chips"></div>
+    </div>
+
+    <div class="field">
+      <span class="field-label">Züge pro Person</span>
+      <div class="stepper">
+        <button id="minusBtn" aria-label="Weniger Züge">−</button>
+        <output id="roundsOut">5</output>
+        <button id="plusBtn" aria-label="Mehr Züge">+</button>
+      </div>
+    </div>
+
+    <p id="setupError" class="error" hidden></p>
+    <button id="startBtn" class="btn big">Spiel starten</button>
+  </div>
+</main>
+
+<!-- ========== SPIEL ========== -->
+<main id="game" class="game" hidden>
+  <header class="topbar">
+    <div class="brand">Protein Timeline</div>
+    <div id="scoreboard" class="scoreboard"></div>
+  </header>
+
+  <section class="board">
+    <div id="track" class="track">
+      <div class="track-inner">
+        <div id="cards" class="cards"></div>
+        <div class="bar"></div>
+      </div>
+    </div>
+    <div class="scale"><span>Wenig Protein</span><span>Viel Protein</span></div>
+  </section>
+
+  <section id="handArea" class="hand-area">
+    <p id="turnText" class="turn"></p>
+    <div id="handCard" class="hand-card"></div>
+    <p class="hint">Zieh die Karte an die passende Stelle auf dem Zeitstrahl.</p>
+  </section>
+
+  <section id="resultSheet" class="sheet" hidden>
+    <div class="sheet-inner">
+      <h2 id="resultTitle"></h2>
+      <p id="resultText"></p>
+      <div class="sheet-actions">
+        <button id="recipeBtn" class="btn outline">Rezept ansehen</button>
+        <button id="nextBtn" class="btn">Weiter</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ========== ENDE ========== -->
+<main id="end" class="end" hidden>
+  <canvas id="fireworks" aria-hidden="true"></canvas>
+  <div class="end-inner">
+    <h1 id="winner"></h1>
+    <p id="winnerSub" class="winner-sub"></p>
+    <div id="podium" class="podium"></div>
+    <ol id="ranking" class="ranking"></ol>
+    <button id="againBtn" class="btn big">Neue Runde</button>
+  </div>
+</main>
+
+<!-- ========== REZEPT-FENSTER ========== -->
+<div id="recipe" class="modal" role="dialog" aria-modal="true" aria-labelledby="rTitle" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <article class="modal-panel">
+    <button class="close" data-close aria-label="Rezept schließen">×</button>
+    <div id="rHero" class="hero">
+      <div id="rMedia" class="hero-media"></div>
+      <span id="rBadge" class="hero-badge"></span>
+    </div>
+    <div class="modal-body">
+      <h2 id="rTitle"></h2>
+      <ul id="rMeta" class="meta"></ul>
+
+      <div class="ingr-head">
+        <h3>Zutaten</h3>
+        <div class="stepper small">
+          <button id="pMinus" aria-label="Weniger Portionen">−</button>
+          <output id="pOut"></output>
+          <button id="pPlus" aria-label="Mehr Portionen">+</button>
+        </div>
+      </div>
+      <ul id="rIngr" class="ingr-list"></ul>
+
+      <h3 class="steps-title">Zubereitung</h3>
+      <ol id="rSteps" class="steps"></ol>
+      <a id="rLink" class="orig" target="_blank" rel="noopener" hidden>Zum Originalrezept</a>
+    </div>
+  </article>
+</div>
+<script>
+// ============================================================
+// 1. REZEPTE
+//    portionen: für wie viele Portionen die Mengen gelten
+//    kcal / protein: Nährwerte PRO PORTION (grob geschätzt, bitte prüfen)
+//    Zeiten in Minuten · schwierigkeit: "simpel", "normal" oder "pfiffig"
+//    menge: null = keine feste Menge (z. B. "etwas Salz")
+//    bild: Link zu einem Foto (leer = Emoji wird gezeigt)
+//    link: optional, Link zum Originalrezept (z. B. bei Chefkoch)
+//    Die Reihenfolge hier ist egal – das Spiel mischt jedes Mal neu.
+// ============================================================
+const REZEPTE = [
+  { name: "Magerquark mit Beeren", emoji: "🫐", bild: "", link: "",
+    kcal: 230, protein: 31, portionen: 2,
+    arbeitszeit: 5, kochzeit: 0, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 500, einheit: "g", name: "Magerquark" },
+      { menge: 200, einheit: "g", name: "Beeren (frisch oder TK)" },
+      { menge: 2, einheit: "TL", name: "Honig" },
+      { menge: 4, einheit: "EL", name: "kaltes Wasser" }
+    ],
+    schritte: [
+      "Gefrorene Beeren vorher auftauen lassen: über Nacht im Kühlschrank oder ca. 1 Stunde bei Zimmertemperatur. Frische Beeren kurz in einem Sieb abspülen und abtropfen lassen.",
+      "Den Magerquark in eine Schüssel geben und mit dem Wasser ca. 1 Minute mit einem Schneebesen oder Löffel glatt und cremig rühren.",
+      "Den Quark auf Schalen verteilen.",
+      "Die Beeren darauf verteilen, den Honig darüberträufeln und sofort servieren."
+    ] },
+
+  { name: "Hähnchen mit Reis & Brokkoli", emoji: "🍗", bild: "", link: "",
+    kcal: 520, protein: 46, portionen: 2,
+    arbeitszeit: 15, kochzeit: 20, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 300, einheit: "g", name: "Hähnchenbrustfilet" },
+      { menge: 140, einheit: "g", name: "Basmatireis" },
+      { menge: 400, einheit: "g", name: "Brokkoli" },
+      { menge: 2, einheit: "TL", name: "Rapsöl" },
+      { menge: 0.5, einheit: "TL", name: "Paprikapulver, edelsüß" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Den Reis in einem Sieb unter kaltem Wasser abspülen, bis das Wasser klar bleibt. Mit der doppelten Menge Wasser und einer Prise Salz in einen Topf geben.",
+      "Den Reis aufkochen, dann die Hitze auf die niedrigste Stufe stellen, den Deckel auflegen und 12–15 Minuten quellen lassen, bis das Wasser aufgesogen ist. Dabei nicht umrühren.",
+      "Inzwischen den Brokkoli in kleine Röschen schneiden. Den Strunk schälen und in dünne Scheiben schneiden, er ist genauso essbar.",
+      "Das Hähnchen mit Küchenpapier trocken tupfen und in ca. 2 cm große Würfel schneiden. Mit Salz, Pfeffer und Paprikapulver würzen.",
+      "Das Öl in einer Pfanne bei mittlerer bis hoher Hitze erhitzen. Das Hähnchen darin 6–8 Minuten rundum goldbraun braten. Es ist durch, wenn es innen nicht mehr rosa ist.",
+      "Den Brokkoli mit ca. 2 cm hoch Wasser und etwas Salz in einen Topf geben, Deckel auflegen und 4–5 Minuten dämpfen. Er sollte noch leicht bissfest sein.",
+      "Reis, Hähnchen und Brokkoli auf Teller verteilen."
+    ] },
+
+  { name: "Linsen-Dal mit Reis", emoji: "🍛", bild: "", link: "",
+    kcal: 585, protein: 26, portionen: 2,
+    arbeitszeit: 15, kochzeit: 25, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 160, einheit: "g", name: "rote Linsen" },
+      { menge: 120, einheit: "g", name: "Basmatireis" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 2, einheit: "cm", name: "frischer Ingwer" },
+      { menge: 1, einheit: "EL", name: "Rapsöl" },
+      { menge: 2, einheit: "TL", name: "Currypulver" },
+      { menge: 500, einheit: "ml", name: "Gemüsebrühe" },
+      { menge: 200, einheit: "ml", name: "Kokosmilch (light)" },
+      { menge: 1, einheit: "TL", name: "Zitronensaft" },
+      { menge: null, einheit: "etwas", name: "Salz" }
+    ],
+    schritte: [
+      "Den Reis nach Packungsanweisung kochen.",
+      "Die Zwiebel schälen und fein würfeln. Knoblauch und Ingwer schälen und sehr fein hacken oder reiben.",
+      "Das Öl in einem Topf bei mittlerer Hitze erhitzen. Die Zwiebel darin ca. 3 Minuten glasig anschwitzen. Knoblauch, Ingwer und Currypulver dazugeben und 1 Minute unter Rühren mitbraten, bis es duftet.",
+      "Die Linsen in einem Sieb kurz abspülen, in den Topf geben und mit der Gemüsebrühe aufgießen. Aufkochen lassen.",
+      "Bei kleiner Hitze ohne Deckel 12–15 Minuten köcheln lassen und gelegentlich umrühren, damit nichts anbrennt. Das Dal ist fertig, wenn die Linsen zerfallen und es sämig ist.",
+      "Die Kokosmilch einrühren, kurz erhitzen und mit Salz und Zitronensaft abschmecken. Mit dem Reis servieren."
+    ] },
+
+  { name: "Spaghetti Carbonara", emoji: "🍝", bild: "", link: "",
+    kcal: 1025, protein: 40, portionen: 2,
+    arbeitszeit: 15, kochzeit: 15, ruhezeit: 0, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 250, einheit: "g", name: "Spaghetti" },
+      { menge: 100, einheit: "g", name: "Guanciale (oder Pancetta)" },
+      { menge: 2, einheit: "", name: "Eier" },
+      { menge: 2, einheit: "", name: "Eigelb" },
+      { menge: 60, einheit: "g", name: "Pecorino" },
+      { menge: null, einheit: "reichlich", name: "schwarzer Pfeffer, frisch gemahlen" },
+      { menge: null, einheit: "etwas", name: "Salz (für das Nudelwasser)" }
+    ],
+    schritte: [
+      "Einen großen Topf mit reichlich Wasser aufsetzen. Sobald es kocht, kräftig salzen.",
+      "Den Pecorino fein reiben. Eier und Eigelb in einer Schüssel verquirlen, Käse und reichlich Pfeffer unterrühren.",
+      "Den Guanciale in ca. 1 cm breite Streifen schneiden und in einer großen Pfanne ohne Öl bei mittlerer Hitze 5–7 Minuten knusprig braten. Die Pfanne dann vom Herd nehmen.",
+      "Die Spaghetti im kochenden Wasser nach Packungsangabe bissfest garen. Vor dem Abgießen eine Tasse Nudelwasser abschöpfen.",
+      "Die Spaghetti tropfnass zum Guanciale in die Pfanne geben und gut mischen. Wichtig: Die Pfanne steht jetzt neben dem Herd, sonst wird aus dem Ei Rührei.",
+      "Die Eimasse und 3–4 EL Nudelwasser dazugeben und alles zügig ca. 1 Minute mischen, bis eine cremige Soße entsteht. Ist sie zu dick, noch etwas Nudelwasser dazugeben. Sofort servieren."
+    ] },
+
+  { name: "Rührei mit Vollkornbrot", emoji: "🍳", bild: "", link: "",
+    kcal: 467, protein: 27, portionen: 2,
+    arbeitszeit: 5, kochzeit: 5, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 6, einheit: "", name: "Eier" },
+      { menge: 4, einheit: "Scheiben", name: "Vollkornbrot" },
+      { menge: 10, einheit: "g", name: "Butter" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" },
+      { menge: null, einheit: "nach Wunsch", name: "Schnittlauch" }
+    ],
+    schritte: [
+      "Die Eier in eine Schüssel aufschlagen, mit Salz und Pfeffer würzen und mit einer Gabel verquirlen, bis Eigelb und Eiweiß sich verbunden haben.",
+      "Die Butter in einer beschichteten Pfanne bei mittlerer Hitze schmelzen. Sie soll schäumen, aber nicht braun werden.",
+      "Die Eier hineingießen und ca. 20 Sekunden stocken lassen. Dann mit einem Pfannenwender langsam vom Rand zur Mitte schieben.",
+      "So weitermachen, bis die Eier fast gestockt sind, aber noch leicht feucht glänzen (ca. 2–3 Minuten). Die Pfanne sofort vom Herd nehmen, denn die Eier garen noch nach.",
+      "Das Brot nach Wunsch toasten. Das Rührei dazu anrichten und mit Schnittlauchröllchen bestreuen."
+    ] },
+
+  { name: "Thunfischsalat mit Bohnen", emoji: "🥗", bild: "", link: "",
+    kcal: 315, protein: 37, portionen: 2,
+    arbeitszeit: 15, kochzeit: 0, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 2, einheit: "Dosen", name: "Thunfisch im eigenen Saft" },
+      { menge: 100, einheit: "g", name: "Kidneybohnen (aus der Dose)" },
+      { menge: 150, einheit: "g", name: "Blattsalat" },
+      { menge: 2, einheit: "", name: "Tomaten" },
+      { menge: 0.5, einheit: "", name: "Salatgurke" },
+      { menge: 2, einheit: "EL", name: "Olivenöl" },
+      { menge: 1, einheit: "EL", name: "Zitronensaft" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Den Salat waschen, trocken schleudern und in mundgerechte Stücke zupfen.",
+      "Die Tomaten waschen und würfeln. Die Gurke waschen, längs halbieren und in Scheiben schneiden.",
+      "Die Bohnen in einem Sieb abspülen und abtropfen lassen. Den Thunfisch abgießen und mit einer Gabel grob zerpflücken.",
+      "Für das Dressing Olivenöl, Zitronensaft, Salz und Pfeffer in einer kleinen Schüssel verrühren.",
+      "Alle Zutaten in einer großen Schüssel mischen und erst direkt vor dem Servieren mit dem Dressing vermengen, damit der Salat knackig bleibt."
+    ] },
+
+  { name: "Pizza Margherita", emoji: "🍕", bild: "", link: "",
+    kcal: 865, protein: 35, portionen: 2,
+    arbeitszeit: 20, kochzeit: 12, ruhezeit: 60, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 300, einheit: "g", name: "Weizenmehl (Type 00 oder 405)" },
+      { menge: 180, einheit: "ml", name: "lauwarmes Wasser" },
+      { menge: 7, einheit: "g", name: "Trockenhefe (1 Päckchen)" },
+      { menge: 1, einheit: "TL", name: "Salz" },
+      { menge: 2, einheit: "TL", name: "Olivenöl" },
+      { menge: 160, einheit: "g", name: "passierte Tomaten" },
+      { menge: 0.5, einheit: "TL", name: "getrockneter Oregano" },
+      { menge: 200, einheit: "g", name: "Mozzarella" },
+      { menge: null, einheit: "einige Blätter", name: "Basilikum" }
+    ],
+    schritte: [
+      "Mehl, Hefe und Salz in einer Schüssel mischen. Das Wasser und 1 TL Olivenöl dazugeben.",
+      "Alles mit den Händen ca. 8–10 Minuten zu einem glatten, elastischen Teig kneten. Klebt er stark an den Fingern, etwas Mehl dazugeben.",
+      "Den Teig abgedeckt an einem warmen Ort ca. 1 Stunde gehen lassen, bis er sich etwa verdoppelt hat.",
+      "Den Ofen auf 250 °C Ober-/Unterhitze vorheizen (oder die höchste Stufe). Ein Backblech mit Backpapier belegen.",
+      "Die passierten Tomaten mit Oregano und einer Prise Salz verrühren. Den Mozzarella abtropfen lassen und klein zupfen.",
+      "Den Teig in so viele Stücke teilen, wie du Pizzen möchtest. Jedes Stück auf einer bemehlten Fläche rund und dünn ausrollen oder mit den Händen ausziehen und aufs Blech legen.",
+      "Die Tomatensoße dünn verstreichen, dabei einen Rand frei lassen. Den Mozzarella darauf verteilen.",
+      "Auf der untersten Schiene ca. 10–12 Minuten backen, bis der Rand goldbraun ist. Je nach Blechgröße nacheinander backen. Mit dem restlichen Olivenöl beträufeln und mit Basilikum belegen."
+    ] },
+
+  { name: "Lachs mit Kartoffeln & Spinat", emoji: "🐟", bild: "", link: "",
+    kcal: 550, protein: 38, portionen: 2,
+    arbeitszeit: 15, kochzeit: 25, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 2, einheit: "", name: "Lachsfilets mit Haut (à ca. 150 g)" },
+      { menge: 500, einheit: "g", name: "Kartoffeln, festkochend" },
+      { menge: 200, einheit: "g", name: "frischer Blattspinat" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 2, einheit: "TL", name: "Butter" },
+      { menge: 0.5, einheit: "", name: "Zitrone" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Die Kartoffeln schälen, große halbieren. In einem Topf mit Salzwasser bedecken, aufkochen und ca. 20 Minuten garen. Sie sind fertig, wenn ein Messer leicht hineingleitet.",
+      "Den Lachs mit Küchenpapier trocken tupfen und rundum salzen.",
+      "Eine beschichtete Pfanne ohne Öl bei mittlerer Hitze erhitzen. Den Lachs mit der Hautseite nach unten hineinlegen und 5–6 Minuten braten, ohne ihn zu bewegen, bis die Haut knusprig ist.",
+      "Den Lachs wenden und noch 1–2 Minuten braten. Er ist gar, wenn er innen hellrosa ist und sich leicht zerteilen lässt. Herausnehmen und mit Zitronensaft beträufeln.",
+      "Den Spinat waschen und abtropfen lassen. Den Knoblauch schälen und fein hacken.",
+      "Die Butter in der Pfanne schmelzen, den Knoblauch 30 Sekunden anbraten, dann den Spinat dazugeben und unter Rühren 1–2 Minuten zusammenfallen lassen. Mit Salz und Pfeffer würzen.",
+      "Die Kartoffeln abgießen und mit Lachs und Spinat anrichten."
+    ] },
+
+  { name: "Chili con Carne", emoji: "🌶️", bild: "", link: "",
+    kcal: 515, protein: 38, portionen: 2,
+    arbeitszeit: 15, kochzeit: 30, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 250, einheit: "g", name: "Rinderhackfleisch" },
+      { menge: 200, einheit: "g", name: "Kidneybohnen (Dose, abgetropft)" },
+      { menge: 400, einheit: "g", name: "gehackte Tomaten (Dose)" },
+      { menge: 100, einheit: "g", name: "Mais (Dose, abgetropft)" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 1, einheit: "TL", name: "Paprikapulver, edelsüß" },
+      { menge: 1, einheit: "TL", name: "Kreuzkümmel, gemahlen" },
+      { menge: 0.5, einheit: "TL", name: "Chilipulver" },
+      { menge: null, einheit: "etwas", name: "Salz" }
+    ],
+    schritte: [
+      "Zwiebel und Knoblauch schälen und fein würfeln.",
+      "Einen Topf ohne Öl bei mittlerer bis hoher Hitze erhitzen. Das Hackfleisch hineingeben und 5–6 Minuten krümelig braten, bis es nicht mehr rosa ist. Dabei mit dem Kochlöffel zerkleinern.",
+      "Zwiebel und Knoblauch dazugeben und 2 Minuten mitbraten. Paprika, Kreuzkümmel und Chili einrühren und 30 Sekunden anrösten.",
+      "Die gehackten Tomaten dazugeben. Die leere Dose zu einem Viertel mit Wasser füllen, ausschwenken und ebenfalls dazugießen.",
+      "Bohnen und Mais in einem Sieb abspülen und unterrühren. Bei kleiner Hitze ohne Deckel ca. 20 Minuten köcheln lassen und gelegentlich umrühren.",
+      "Mit Salz abschmecken. Wer es schärfer mag, gibt mehr Chilipulver dazu."
+    ] },
+
+  { name: "Overnight Oats mit Banane", emoji: "🥣", bild: "", link: "",
+    kcal: 525, protein: 18, portionen: 2,
+    arbeitszeit: 5, kochzeit: 0, ruhezeit: 240, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 120, einheit: "g", name: "zarte Haferflocken" },
+      { menge: 400, einheit: "ml", name: "Milch (1,5 % Fett)" },
+      { menge: 2, einheit: "", name: "Bananen" },
+      { menge: 20, einheit: "g", name: "Erdnussbutter" },
+      { menge: 2, einheit: "EL", name: "Ahornsirup" },
+      { menge: null, einheit: "1 Prise", name: "Salz" }
+    ],
+    schritte: [
+      "Haferflocken, Milch und eine Prise Salz auf Gläser oder Schraubgläser verteilen und gut umrühren.",
+      "Abgedeckt über Nacht, mindestens aber 4 Stunden, in den Kühlschrank stellen. Die Haferflocken saugen die Milch auf und werden weich.",
+      "Am Morgen umrühren. Ist die Masse zu fest, einen Schuss Milch dazugeben.",
+      "Die Bananen schälen, in Scheiben schneiden und darauf verteilen. Erdnussbutter und Ahornsirup darüberträufeln."
+    ] },
+
+  { name: "Tofu-Gemüse-Pfanne mit Reis", emoji: "🥢", bild: "", link: "",
+    kcal: 695, protein: 37, portionen: 2,
+    arbeitszeit: 20, kochzeit: 20, ruhezeit: 0, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 400, einheit: "g", name: "Tofu natur, fest" },
+      { menge: 500, einheit: "g", name: "Gemüse (z. B. Paprika, Zucchini, Brokkoli)" },
+      { menge: 160, einheit: "g", name: "Basmatireis" },
+      { menge: 2, einheit: "EL", name: "Rapsöl" },
+      { menge: 2, einheit: "EL", name: "Sojasoße" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 1, einheit: "TL", name: "Speisestärke" }
+    ],
+    schritte: [
+      "Den Reis nach Packungsanweisung kochen.",
+      "Den Tofu aus der Packung nehmen, in ein sauberes Küchentuch wickeln und ca. 5 Minuten mit einem Schneidebrett beschweren, damit Flüssigkeit austritt. So wird er später knuspriger.",
+      "Den Tofu in ca. 2 cm große Würfel schneiden und mit der Speisestärke vermengen.",
+      "Das Gemüse waschen und in mundgerechte Stücke schneiden. Den Knoblauch schälen und fein hacken.",
+      "1 EL Öl in einer großen Pfanne stark erhitzen. Den Tofu darin 6–8 Minuten braten und nur ab und zu wenden, bis er rundum goldbraun ist. Herausnehmen.",
+      "Das restliche Öl in die Pfanne geben. Gemüse und Knoblauch 5–6 Minuten unter Rühren braten. Das Gemüse sollte noch Biss haben.",
+      "Den Tofu zurück in die Pfanne geben, mit Sojasoße ablöschen und 1 Minute schwenken. Mit dem Reis servieren."
+    ] },
+
+  { name: "Ofenpommes mit Ketchup & Mayo", emoji: "🍟", bild: "", link: "",
+    kcal: 570, protein: 7, portionen: 2,
+    arbeitszeit: 2, kochzeit: 20, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 500, einheit: "g", name: "Ofenpommes (TK)" },
+      { menge: 60, einheit: "g", name: "Ketchup" },
+      { menge: 40, einheit: "g", name: "Mayonnaise" },
+      { menge: null, einheit: "etwas", name: "Salz" }
+    ],
+    schritte: [
+      "Den Ofen nach Packungsangabe vorheizen, meist auf 220 °C Ober-/Unterhitze.",
+      "Ein Backblech mit Backpapier belegen und die Pommes in einer einzigen Schicht darauf verteilen. Liegen sie übereinander, werden sie nicht knusprig.",
+      "Ca. 20 Minuten backen und nach der Hälfte der Zeit einmal wenden.",
+      "Leicht salzen und mit Ketchup und Mayonnaise servieren."
+    ] },
+
+  { name: "Skyr-Bowl mit Apfel & Granola", emoji: "🥛", bild: "", link: "",
+    kcal: 340, protein: 31, portionen: 2,
+    arbeitszeit: 5, kochzeit: 0, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 400, einheit: "g", name: "Skyr natur" },
+      { menge: 1, einheit: "", name: "Apfel" },
+      { menge: 60, einheit: "g", name: "Granola (Knuspermüsli)" },
+      { menge: 2, einheit: "TL", name: "Honig" },
+      { menge: 0.5, einheit: "TL", name: "Zimt" }
+    ],
+    schritte: [
+      "Den Apfel waschen, vierteln, das Kerngehäuse herausschneiden und das Fruchtfleisch in kleine Würfel schneiden.",
+      "Den Skyr in einer Schüssel kurz glatt rühren und auf Schalen verteilen.",
+      "Die Apfelwürfel darauf verteilen, mit Honig beträufeln und mit Zimt bestäuben.",
+      "Das Granola erst direkt vor dem Essen darüberstreuen, damit es knusprig bleibt."
+    ] },
+
+  { name: "Protein-Pancakes", emoji: "🥞", bild: "", link: "",
+    kcal: 410, protein: 32, portionen: 2,
+    arbeitszeit: 10, kochzeit: 10, ruhezeit: 5, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 200, einheit: "g", name: "körniger Frischkäse (Hüttenkäse)" },
+      { menge: 3, einheit: "", name: "Eier" },
+      { menge: 80, einheit: "g", name: "zarte Haferflocken" },
+      { menge: 1, einheit: "TL", name: "Backpulver" },
+      { menge: 1, einheit: "TL", name: "Rapsöl" },
+      { menge: 100, einheit: "g", name: "Beeren" },
+      { menge: null, einheit: "1 Prise", name: "Salz" }
+    ],
+    schritte: [
+      "Frischkäse, Eier, Haferflocken, Backpulver und Salz in einen hohen Becher geben und mit dem Pürierstab ca. 30 Sekunden zu einem glatten Teig pürieren.",
+      "Den Teig 5 Minuten quellen lassen, dann wird er etwas dicker.",
+      "Eine beschichtete Pfanne bei mittlerer Hitze erhitzen und das Öl mit Küchenpapier dünn verteilen.",
+      "Pro Pancake ca. 2 EL Teig in die Pfanne geben. Ca. 2 Minuten backen, bis sich oben Bläschen bilden und der Rand fest wird. Dann wenden und weitere 1–2 Minuten backen.",
+      "Die fertigen Pancakes im Ofen bei 50 °C warm halten, bis der ganze Teig verbraucht ist. Mit den Beeren servieren."
+    ] },
+
+  { name: "Shakshuka", emoji: "🍅", bild: "", link: "",
+    kcal: 380, protein: 21, portionen: 2,
+    arbeitszeit: 10, kochzeit: 20, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 4, einheit: "", name: "Eier" },
+      { menge: 400, einheit: "g", name: "gehackte Tomaten (Dose)" },
+      { menge: 1, einheit: "", name: "rote Paprika" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 1, einheit: "EL", name: "Olivenöl" },
+      { menge: 1, einheit: "TL", name: "Kreuzkümmel, gemahlen" },
+      { menge: 1, einheit: "TL", name: "Paprikapulver, edelsüß" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" },
+      { menge: null, einheit: "etwas", name: "frische Petersilie" }
+    ],
+    schritte: [
+      "Zwiebel und Knoblauch schälen und fein würfeln. Die Paprika halbieren, entkernen und in feine Streifen schneiden.",
+      "Das Öl in einer Pfanne mit Deckel bei mittlerer Hitze erhitzen. Zwiebel und Paprika darin ca. 5 Minuten weich braten. Knoblauch und Gewürze dazugeben und 1 Minute mitbraten.",
+      "Die Tomaten dazugeben, salzen und pfeffern und 8–10 Minuten köcheln lassen, bis die Soße etwas eingedickt ist.",
+      "Mit einem Löffel vier Mulden in die Soße drücken und in jede ein Ei aufschlagen.",
+      "Den Deckel auflegen und bei kleiner Hitze 6–8 Minuten stocken lassen. Das Eiweiß soll fest sein, das Eigelb noch weich.",
+      "Die Petersilie hacken und darüberstreuen. Dazu passt frisches Brot."
+    ] },
+
+  { name: "Putengeschnetzeltes mit Champignons", emoji: "🍄", bild: "", link: "",
+    kcal: 560, protein: 48, portionen: 2,
+    arbeitszeit: 15, kochzeit: 25, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 300, einheit: "g", name: "Putenbrustfilet" },
+      { menge: 250, einheit: "g", name: "Champignons" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "TL", name: "Rapsöl" },
+      { menge: 150, einheit: "ml", name: "Kochsahne (15 % Fett)" },
+      { menge: 100, einheit: "ml", name: "Gemüsebrühe" },
+      { menge: 140, einheit: "g", name: "Basmatireis" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" },
+      { menge: null, einheit: "etwas", name: "frische Petersilie" }
+    ],
+    schritte: [
+      "Den Reis nach Packungsanweisung kochen.",
+      "Die Pute trocken tupfen und in dünne Streifen schneiden. Die Champignons mit Küchenpapier abreiben (nicht waschen, sonst saugen sie Wasser) und in Scheiben schneiden. Die Zwiebel fein würfeln.",
+      "Das Öl in einer großen Pfanne stark erhitzen. Die Pute darin 3–4 Minuten rundum anbraten, salzen, pfeffern und herausnehmen.",
+      "In derselben Pfanne Zwiebel und Champignons ca. 5 Minuten braten, bis die Pilze gebräunt sind und keine Flüssigkeit mehr in der Pfanne steht.",
+      "Mit Brühe und Kochsahne ablöschen und 3 Minuten köcheln lassen. Das Fleisch zurück in die Pfanne geben und nur noch 2 Minuten erhitzen, damit es zart bleibt.",
+      "Mit Salz und Pfeffer abschmecken, mit gehackter Petersilie bestreuen und mit dem Reis servieren."
+    ] },
+
+  { name: "Gyros-Bowl mit Tzatziki", emoji: "🥙", bild: "", link: "",
+    kcal: 620, protein: 45, portionen: 2,
+    arbeitszeit: 20, kochzeit: 20, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 300, einheit: "g", name: "Hähnchenbrustfilet" },
+      { menge: 2, einheit: "TL", name: "Gyrosgewürz" },
+      { menge: 1, einheit: "EL", name: "Olivenöl" },
+      { menge: 120, einheit: "g", name: "Basmatireis" },
+      { menge: 200, einheit: "g", name: "griechischer Joghurt (2 % Fett)" },
+      { menge: 0.5, einheit: "", name: "Salatgurke" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 2, einheit: "", name: "Tomaten" },
+      { menge: 0.5, einheit: "", name: "rote Zwiebel" },
+      { menge: null, einheit: "etwas", name: "Salz" }
+    ],
+    schritte: [
+      "Den Reis nach Packungsanweisung kochen.",
+      "Für das Tzatziki die Gurke grob raspeln und mit den Händen kräftig ausdrücken, damit es nicht wässrig wird. Den Knoblauch fein reiben. Beides mit Joghurt und Salz verrühren und kalt stellen.",
+      "Das Hähnchen in dünne Streifen schneiden und mit Gyrosgewürz und der Hälfte des Öls vermengen.",
+      "Das restliche Öl in einer Pfanne stark erhitzen. Das Fleisch darin 5–6 Minuten braten, bis es gebräunt und durchgegart ist.",
+      "Die Tomaten würfeln, die Zwiebel in feine Ringe schneiden.",
+      "Reis in Schalen verteilen und mit Fleisch, Tomaten, Zwiebel und einem großen Klecks Tzatziki anrichten."
+    ] },
+
+  { name: "Lasagne Bolognese", emoji: "🥘", bild: "", link: "",
+    kcal: 720, protein: 39, portionen: 4,
+    arbeitszeit: 30, kochzeit: 60, ruhezeit: 10, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 500, einheit: "g", name: "Rinderhackfleisch" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "", name: "Karotte" },
+      { menge: 2, einheit: "EL", name: "Tomatenmark" },
+      { menge: 800, einheit: "g", name: "gehackte Tomaten (Dose)" },
+      { menge: 1, einheit: "TL", name: "getrockneter Oregano" },
+      { menge: 250, einheit: "g", name: "Lasagneplatten (ohne Vorkochen)" },
+      { menge: 40, einheit: "g", name: "Butter" },
+      { menge: 40, einheit: "g", name: "Weizenmehl" },
+      { menge: 500, einheit: "ml", name: "Milch" },
+      { menge: 100, einheit: "g", name: "geriebener Mozzarella" },
+      { menge: null, einheit: "etwas", name: "Muskatnuss, Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Zwiebel und Karotte schälen und sehr fein würfeln.",
+      "Das Hackfleisch in einem großen Topf ohne Öl 6 Minuten krümelig braten. Zwiebel und Karotte dazugeben und 3 Minuten mitbraten. Das Tomatenmark einrühren und 1 Minute anrösten.",
+      "Tomaten und Oregano dazugeben, salzen, pfeffern und ohne Deckel 20 Minuten köcheln lassen.",
+      "Für die Béchamelsoße die Butter in einem Topf schmelzen, das Mehl einrühren und 1 Minute unter Rühren anschwitzen, ohne dass es braun wird. Die Milch nach und nach mit dem Schneebesen einrühren, damit keine Klümpchen entstehen. Aufkochen und 3–4 Minuten köcheln lassen, bis die Soße dicklich ist. Mit Salz und Muskat würzen.",
+      "Den Ofen auf 180 °C Umluft vorheizen. In eine Auflaufform (ca. 20 × 30 cm) eine dünne Schicht Bolognese geben. Dann abwechselnd Lasagneplatten, Bolognese und Béchamel schichten. Die oberste Schicht ist Béchamel.",
+      "Den Mozzarella darüberstreuen und ca. 40 Minuten backen, bis die Oberfläche goldbraun ist.",
+      "Die Lasagne 10 Minuten ruhen lassen, dann lässt sie sich sauber schneiden."
+    ] },
+
+  { name: "Käsespätzle mit Röstzwiebeln", emoji: "🧀", bild: "", link: "",
+    kcal: 820, protein: 35, portionen: 4,
+    arbeitszeit: 30, kochzeit: 20, ruhezeit: 10, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 400, einheit: "g", name: "Weizenmehl" },
+      { menge: 4, einheit: "", name: "Eier" },
+      { menge: 150, einheit: "ml", name: "Wasser" },
+      { menge: 1, einheit: "TL", name: "Salz" },
+      { menge: 200, einheit: "g", name: "Bergkäse, gerieben" },
+      { menge: 2, einheit: "", name: "Zwiebeln" },
+      { menge: 30, einheit: "g", name: "Butter" },
+      { menge: null, einheit: "etwas", name: "Pfeffer" },
+      { menge: null, einheit: "etwas", name: "Schnittlauch" }
+    ],
+    schritte: [
+      "Mehl, Eier, Wasser und Salz in einer Schüssel mit einem Kochlöffel kräftig schlagen, bis der Teig Blasen wirft und zäh vom Löffel reißt (ca. 5 Minuten). 10 Minuten ruhen lassen.",
+      "Einen großen Topf mit Salzwasser zum Kochen bringen. Die Zwiebeln schälen, in Ringe schneiden und in der Butter bei mittlerer Hitze ca. 10 Minuten goldbraun braten. Beiseitestellen.",
+      "Den Ofen auf 100 °C vorheizen und eine Auflaufform hineinstellen.",
+      "Den Teig portionsweise mit einem Spätzlehobel oder einer Spätzlepresse ins kochende Wasser drücken. Sobald die Spätzle oben schwimmen (nach 1–2 Minuten), mit einer Schaumkelle herausheben und abtropfen lassen.",
+      "Die Spätzle schichtweise mit Käse und etwas Pfeffer in die warme Form geben, bis alles verbraucht ist. Im Ofen warm halten, bis der Käse geschmolzen ist.",
+      "Mit den Röstzwiebeln und Schnittlauchröllchen bestreut servieren."
+    ] },
+
+  { name: "Rindergulasch mit Kartoffeln", emoji: "🥩", bild: "", link: "",
+    kcal: 525, protein: 44, portionen: 4,
+    arbeitszeit: 25, kochzeit: 120, ruhezeit: 0, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 800, einheit: "g", name: "Rindergulasch (aus der Schulter)" },
+      { menge: 3, einheit: "", name: "Zwiebeln" },
+      { menge: 1, einheit: "EL", name: "Rapsöl" },
+      { menge: 2, einheit: "EL", name: "Paprikapulver, edelsüß" },
+      { menge: 1, einheit: "EL", name: "Tomatenmark" },
+      { menge: 500, einheit: "ml", name: "Rinderbrühe" },
+      { menge: 1, einheit: "TL", name: "getrockneter Majoran" },
+      { menge: 800, einheit: "g", name: "Kartoffeln, festkochend" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Die Zwiebeln schälen und grob würfeln. Das Fleisch trocken tupfen und zu große Stücke auf ca. 3 cm halbieren.",
+      "Das Öl in einem großen Bräter oder Topf stark erhitzen. Das Fleisch portionsweise rundum kräftig anbraten und herausnehmen. Nicht alles auf einmal hineingeben, sonst kocht es, statt zu braten.",
+      "Die Zwiebeln im Bratfett bei mittlerer Hitze 8–10 Minuten goldbraun braten. Tomatenmark und Paprikapulver einrühren und nur 30 Sekunden anrösten, denn Paprika wird schnell bitter.",
+      "Sofort mit der Brühe ablöschen. Fleisch, Majoran, Salz und Pfeffer dazugeben. Deckel auflegen und bei kleiner Hitze 1,5–2 Stunden schmoren lassen. Gelegentlich umrühren und bei Bedarf etwas Wasser nachgießen.",
+      "Das Gulasch ist fertig, wenn sich das Fleisch mit einer Gabel leicht zerteilen lässt.",
+      "Ca. 25 Minuten vor Ende die Kartoffeln schälen, halbieren und in Salzwasser 20 Minuten garen. Mit dem Gulasch servieren."
+    ] },
+
+  { name: "Hähnchen-Curry mit Reis", emoji: "🥥", bild: "", link: "",
+    kcal: 640, protein: 46, portionen: 2,
+    arbeitszeit: 15, kochzeit: 25, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 300, einheit: "g", name: "Hähnchenbrustfilet" },
+      { menge: 1, einheit: "", name: "rote Paprika" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "EL", name: "rote Currypaste" },
+      { menge: 200, einheit: "ml", name: "Kokosmilch (light)" },
+      { menge: 100, einheit: "ml", name: "Wasser" },
+      { menge: 1, einheit: "TL", name: "Rapsöl" },
+      { menge: 140, einheit: "g", name: "Basmatireis" },
+      { menge: 1, einheit: "TL", name: "Limettensaft" },
+      { menge: null, einheit: "nach Wunsch", name: "frischer Koriander" }
+    ],
+    schritte: [
+      "Den Reis nach Packungsanweisung kochen.",
+      "Das Hähnchen in 2 cm große Würfel schneiden, die Paprika in Streifen, die Zwiebel in halbe Ringe.",
+      "Das Öl in einer Pfanne oder einem Wok bei mittlerer bis hoher Hitze erhitzen. Das Hähnchen 4–5 Minuten rundum anbraten und herausnehmen.",
+      "Zwiebel und Paprika in die Pfanne geben und 3 Minuten braten. Die Currypaste einrühren und 1 Minute mitrösten.",
+      "Kokosmilch und Wasser dazugießen, aufkochen, das Hähnchen zurückgeben und 5 Minuten köcheln lassen, bis es durchgegart ist.",
+      "Mit Limettensaft und Salz abschmecken, nach Wunsch mit Koriander bestreuen und mit dem Reis servieren."
+    ] },
+
+  { name: "Spaghetti Bolognese", emoji: "🥫", bild: "", link: "",
+    kcal: 680, protein: 38, portionen: 4,
+    arbeitszeit: 15, kochzeit: 45, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 400, einheit: "g", name: "Spaghetti" },
+      { menge: 500, einheit: "g", name: "Rinderhackfleisch" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "", name: "Karotte" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 2, einheit: "EL", name: "Tomatenmark" },
+      { menge: 800, einheit: "g", name: "passierte Tomaten" },
+      { menge: 1, einheit: "TL", name: "getrockneter Oregano" },
+      { menge: 40, einheit: "g", name: "Parmesan" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Zwiebel, Karotte und Knoblauch schälen und sehr fein würfeln.",
+      "Das Hackfleisch in einem großen Topf ohne Öl bei hoher Hitze 6 Minuten krümelig braten. Das Gemüse dazugeben und 3 Minuten mitbraten.",
+      "Das Tomatenmark einrühren und 1 Minute anrösten. Passierte Tomaten und Oregano dazugeben, salzen und pfeffern.",
+      "Die Soße ohne Deckel bei kleiner Hitze mindestens 30 Minuten köcheln lassen. Je länger, desto aromatischer. Gelegentlich umrühren.",
+      "Ca. 15 Minuten vor Ende die Spaghetti in reichlich Salzwasser nach Packungsangabe bissfest kochen und abgießen.",
+      "Spaghetti mit der Soße anrichten und mit frisch geriebenem Parmesan bestreuen."
+    ] },
+
+  { name: "Cheeseburger", emoji: "🍔", bild: "", link: "",
+    kcal: 650, protein: 31, portionen: 4,
+    arbeitszeit: 20, kochzeit: 15, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 500, einheit: "g", name: "Rinderhackfleisch" },
+      { menge: 4, einheit: "", name: "Burgerbrötchen" },
+      { menge: 4, einheit: "Scheiben", name: "Cheddar" },
+      { menge: 1, einheit: "", name: "Tomate" },
+      { menge: 4, einheit: "Blätter", name: "Eisbergsalat" },
+      { menge: 0.5, einheit: "", name: "rote Zwiebel" },
+      { menge: 2, einheit: "", name: "Gewürzgurken" },
+      { menge: 4, einheit: "EL", name: "Ketchup" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Das Hackfleisch in vier gleich große Portionen teilen und zu flachen Patties formen, ca. 1 cm dick und etwas größer als die Brötchen, denn sie schrumpfen beim Braten. Mit dem Daumen eine kleine Mulde in die Mitte drücken, damit sie sich nicht wölben.",
+      "Tomate und Gurken in Scheiben, die Zwiebel in feine Ringe schneiden. Den Salat waschen und trocken tupfen.",
+      "Eine Pfanne ohne Öl stark erhitzen. Die Patties erst jetzt von beiden Seiten salzen und pfeffern und 3–4 Minuten pro Seite braten.",
+      "Nach dem Wenden je eine Scheibe Cheddar auflegen und den Deckel für 1 Minute aufsetzen, damit der Käse schmilzt.",
+      "Die Brötchen aufschneiden und mit der Schnittfläche kurz in der Pfanne oder im Toaster rösten.",
+      "Die Brötchen mit Ketchup, Salat, Patty, Tomate, Zwiebel und Gurken belegen."
+    ] },
+
+  { name: "Griechischer Bauernsalat", emoji: "🫒", bild: "", link: "",
+    kcal: 380, protein: 14, portionen: 2,
+    arbeitszeit: 15, kochzeit: 0, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 4, einheit: "", name: "Tomaten" },
+      { menge: 1, einheit: "", name: "Salatgurke" },
+      { menge: 1, einheit: "", name: "grüne Paprika" },
+      { menge: 0.5, einheit: "", name: "rote Zwiebel" },
+      { menge: 100, einheit: "g", name: "Feta" },
+      { menge: 60, einheit: "g", name: "Kalamata-Oliven" },
+      { menge: 2, einheit: "EL", name: "Olivenöl" },
+      { menge: 1, einheit: "EL", name: "Rotweinessig" },
+      { menge: 1, einheit: "TL", name: "getrockneter Oregano" },
+      { menge: null, einheit: "etwas", name: "Salz" }
+    ],
+    schritte: [
+      "Tomaten waschen und in grobe Stücke schneiden. Die Gurke waschen, längs halbieren und in dicke Scheiben schneiden.",
+      "Die Paprika entkernen und in Streifen schneiden, die Zwiebel in feine Ringe.",
+      "Alles mit den Oliven in eine Schüssel geben, leicht salzen und mit Essig und Olivenöl vermengen.",
+      "Den Feta in einem Stück oder grob zerbröckelt obendrauf legen und mit Oregano bestreuen."
+    ] },
+
+  { name: "Kartoffelsuppe mit Würstchen", emoji: "🌭", bild: "", link: "",
+    kcal: 450, protein: 16, portionen: 4,
+    arbeitszeit: 20, kochzeit: 30, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 1000, einheit: "g", name: "Kartoffeln, mehligkochend" },
+      { menge: 1, einheit: "Bund", name: "Suppengrün (Karotte, Sellerie, Lauch)" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "EL", name: "Butter" },
+      { menge: 1000, einheit: "ml", name: "Gemüsebrühe" },
+      { menge: 100, einheit: "ml", name: "Sahne" },
+      { menge: 4, einheit: "", name: "Wiener Würstchen" },
+      { menge: 1, einheit: "TL", name: "getrockneter Majoran" },
+      { menge: null, einheit: "etwas", name: "Muskatnuss, Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Kartoffeln, Zwiebel und Suppengrün schälen bzw. putzen und alles in ca. 1 cm große Würfel schneiden. Den Lauch in Ringe schneiden und in einem Sieb gründlich waschen, da oft Sand zwischen den Schichten steckt.",
+      "Die Butter in einem großen Topf schmelzen. Zwiebel und Suppengrün darin 3–4 Minuten andünsten.",
+      "Die Kartoffeln dazugeben, mit Brühe aufgießen und mit Majoran würzen. Aufkochen und zugedeckt ca. 20 Minuten köcheln lassen, bis die Kartoffeln weich sind.",
+      "Etwa die Hälfte der Suppe mit dem Pürierstab grob pürieren, so wird sie sämig und behält trotzdem Stücke.",
+      "Die Sahne einrühren und mit Salz, Pfeffer und Muskat abschmecken.",
+      "Die Würstchen in Scheiben schneiden und in der Suppe 5 Minuten erwärmen. Die Suppe soll dabei nicht mehr kochen, sonst platzen die Würstchen."
+    ] },
+
+  { name: "Schweineschnitzel mit Kartoffelsalat", emoji: "🍋", bild: "", link: "",
+    kcal: 780, protein: 46, portionen: 2,
+    arbeitszeit: 30, kochzeit: 30, ruhezeit: 30, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 2, einheit: "", name: "Schweineschnitzel (à ca. 150 g)" },
+      { menge: 1, einheit: "", name: "Ei" },
+      { menge: 2, einheit: "EL", name: "Weizenmehl" },
+      { menge: 50, einheit: "g", name: "Paniermehl" },
+      { menge: 3, einheit: "EL", name: "Rapsöl zum Braten" },
+      { menge: 500, einheit: "g", name: "Kartoffeln, festkochend" },
+      { menge: 150, einheit: "ml", name: "heiße Gemüsebrühe" },
+      { menge: 2, einheit: "EL", name: "Weißweinessig" },
+      { menge: 1, einheit: "TL", name: "mittelscharfer Senf" },
+      { menge: 1, einheit: "EL", name: "Rapsöl für den Salat" },
+      { menge: 0.5, einheit: "", name: "Zwiebel" },
+      { menge: 0.5, einheit: "", name: "Zitrone" },
+      { menge: null, einheit: "etwas", name: "Salz, Pfeffer und Schnittlauch" }
+    ],
+    schritte: [
+      "Die Kartoffeln mit Schale in Salzwasser ca. 20 Minuten garen, abgießen, kurz abkühlen lassen, pellen und in dünne Scheiben schneiden.",
+      "Die Zwiebel sehr fein würfeln. Heiße Brühe, Essig, Senf, Öl und Zwiebel verrühren, mit Salz und Pfeffer würzen und über die noch warmen Kartoffeln gießen. Vorsichtig mischen und mindestens 30 Minuten ziehen lassen. Die Kartoffeln saugen dabei das Dressing auf.",
+      "Die Schnitzel zwischen zwei Lagen Frischhaltefolie mit einem Topfboden auf ca. 5 mm flach klopfen. Von beiden Seiten salzen und pfeffern.",
+      "Drei tiefe Teller vorbereiten: Mehl, verquirltes Ei und Paniermehl. Jedes Schnitzel erst im Mehl wenden, dann durchs Ei ziehen und zuletzt locker im Paniermehl wenden. Nicht andrücken, dann wird die Panade schön wellig.",
+      "Das Öl in einer großen Pfanne bei mittlerer bis hoher Hitze erhitzen. Die Schnitzel 2–3 Minuten pro Seite goldbraun braten. Die Pfanne dabei leicht schwenken, damit das Öl über die Panade läuft.",
+      "Auf Küchenpapier kurz abtropfen lassen und mit Zitronenspalten und dem Kartoffelsalat servieren. Den Salat vorher mit Schnittlauch bestreuen."
+    ] },
+
+  { name: "Chicken Wrap", emoji: "🌯", bild: "", link: "",
+    kcal: 520, protein: 37, portionen: 2,
+    arbeitszeit: 15, kochzeit: 10, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 250, einheit: "g", name: "Hähnchenbrustfilet" },
+      { menge: 2, einheit: "", name: "große Weizentortillas" },
+      { menge: 100, einheit: "g", name: "griechischer Joghurt" },
+      { menge: 1, einheit: "TL", name: "Zitronensaft" },
+      { menge: 0.5, einheit: "TL", name: "Paprikapulver, edelsüß" },
+      { menge: 1, einheit: "TL", name: "Rapsöl" },
+      { menge: 1, einheit: "", name: "Tomate" },
+      { menge: 50, einheit: "g", name: "Blattsalat" },
+      { menge: 50, einheit: "g", name: "Mais (Dose)" },
+      { menge: 30, einheit: "g", name: "geriebener Käse" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Das Hähnchen in dünne Streifen schneiden und mit Paprika, Salz und Pfeffer würzen.",
+      "Das Öl in einer Pfanne bei mittlerer bis hoher Hitze erhitzen und das Hähnchen 5–6 Minuten braten, bis es durch ist.",
+      "Joghurt mit Zitronensaft und einer Prise Salz verrühren. Die Tomate würfeln, den Salat in Streifen schneiden, den Mais abtropfen lassen.",
+      "Die Tortillas in einer trockenen Pfanne je 20 Sekunden pro Seite erwärmen, dann lassen sie sich leichter rollen.",
+      "Die Tortillas mit Joghurtsoße bestreichen. In die Mitte Salat, Hähnchen, Tomate, Mais und Käse legen.",
+      "Die Seiten links und rechts einklappen und den Wrap von unten nach oben fest aufrollen. Schräg halbieren."
+    ] },
+
+  { name: "Hähnchenbrust mit Ofengemüse", emoji: "🥕", bild: "", link: "",
+    kcal: 420, protein: 42, portionen: 2,
+    arbeitszeit: 15, kochzeit: 35, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 300, einheit: "g", name: "Hähnchenbrustfilet" },
+      { menge: 300, einheit: "g", name: "kleine Kartoffeln" },
+      { menge: 1, einheit: "", name: "Zucchini" },
+      { menge: 1, einheit: "", name: "rote Paprika" },
+      { menge: 1, einheit: "", name: "rote Zwiebel" },
+      { menge: 1, einheit: "EL", name: "Olivenöl" },
+      { menge: 1, einheit: "TL", name: "Kräuter der Provence" },
+      { menge: 0.5, einheit: "TL", name: "Paprikapulver, edelsüß" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Den Ofen auf 200 °C Ober-/Unterhitze vorheizen.",
+      "Die Kartoffeln waschen und halbieren (die Schale bleibt dran). Zucchini und Paprika in mundgerechte Stücke, die Zwiebel in Spalten schneiden.",
+      "Kartoffeln mit der Hälfte des Öls, Salz und Kräutern auf einem Backblech mischen und 15 Minuten vorbacken, da sie länger brauchen als das übrige Gemüse.",
+      "Das Hähnchen mit dem restlichen Öl, Paprikapulver, Salz und Pfeffer einreiben.",
+      "Gemüse und Hähnchen zu den Kartoffeln aufs Blech geben und weitere 20 Minuten backen. Das Hähnchen ist gar, wenn beim Anschneiden kein rosa Fleischsaft mehr austritt.",
+      "Das Hähnchen in Scheiben schneiden und mit dem Gemüse servieren."
+    ] },
+
+  { name: "Garnelen-Zucchini-Pfanne", emoji: "🍤", bild: "", link: "",
+    kcal: 260, protein: 30, portionen: 2,
+    arbeitszeit: 15, kochzeit: 10, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 300, einheit: "g", name: "Garnelen, roh und geschält (TK aufgetaut)" },
+      { menge: 2, einheit: "", name: "Zucchini" },
+      { menge: 150, einheit: "g", name: "Kirschtomaten" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 1, einheit: "EL", name: "Olivenöl" },
+      { menge: 0.5, einheit: "", name: "Zitrone" },
+      { menge: null, einheit: "1 Prise", name: "Chiliflocken" },
+      { menge: null, einheit: "etwas", name: "Salz und Petersilie" }
+    ],
+    schritte: [
+      "Gefrorene Garnelen über Nacht im Kühlschrank auftauen lassen. Danach abspülen und gründlich mit Küchenpapier trocken tupfen.",
+      "Die Zucchini längs halbieren und in Halbmonde schneiden. Die Tomaten halbieren, den Knoblauch in dünne Scheiben schneiden.",
+      "Die Hälfte des Öls in einer großen Pfanne stark erhitzen. Die Zucchini 4–5 Minuten braten, bis sie leicht gebräunt sind, salzen und herausnehmen.",
+      "Das restliche Öl in die Pfanne geben. Garnelen, Knoblauch und Chiliflocken 2–3 Minuten braten, bis die Garnelen rosa und nicht mehr glasig sind. Nicht länger, sonst werden sie gummiartig.",
+      "Zucchini und Tomaten zurück in die Pfanne geben, 1 Minute schwenken, mit Zitronensaft und Salz abschmecken und mit Petersilie bestreuen."
+    ] },
+
+  { name: "Thunfisch-Pasta", emoji: "🐠", bild: "", link: "",
+    kcal: 545, protein: 34, portionen: 2,
+    arbeitszeit: 10, kochzeit: 15, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 200, einheit: "g", name: "Penne" },
+      { menge: 1, einheit: "Dose", name: "Thunfisch im eigenen Saft" },
+      { menge: 400, einheit: "g", name: "gehackte Tomaten (Dose)" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: 1, einheit: "EL", name: "Olivenöl" },
+      { menge: 1, einheit: "EL", name: "Kapern" },
+      { menge: 20, einheit: "g", name: "Parmesan" },
+      { menge: null, einheit: "etwas", name: "Salz, Pfeffer und Petersilie" }
+    ],
+    schritte: [
+      "Die Penne in reichlich Salzwasser nach Packungsangabe bissfest kochen.",
+      "Zwiebel und Knoblauch schälen und fein würfeln. Das Öl in einer Pfanne erhitzen und beides darin 3 Minuten glasig dünsten.",
+      "Die Tomaten dazugeben und 8 Minuten köcheln lassen.",
+      "Den Thunfisch abtropfen lassen, mit einer Gabel zerpflücken und mit den Kapern in die Soße rühren. 2 Minuten erwärmen und mit Salz und Pfeffer abschmecken.",
+      "Die Nudeln abgießen, mit der Soße mischen und mit geriebenem Parmesan und Petersilie servieren."
+    ] },
+
+  { name: "Couscous-Salat mit Kichererbsen", emoji: "🫘", bild: "", link: "",
+    kcal: 480, protein: 17, portionen: 2,
+    arbeitszeit: 15, kochzeit: 5, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 120, einheit: "g", name: "Couscous" },
+      { menge: 150, einheit: "ml", name: "heiße Gemüsebrühe" },
+      { menge: 240, einheit: "g", name: "Kichererbsen (Dose, abgetropft)" },
+      { menge: 1, einheit: "", name: "rote Paprika" },
+      { menge: 0.5, einheit: "", name: "Salatgurke" },
+      { menge: 0.5, einheit: "Bund", name: "Petersilie" },
+      { menge: 2, einheit: "EL", name: "Olivenöl" },
+      { menge: 2, einheit: "EL", name: "Zitronensaft" },
+      { menge: 0.5, einheit: "TL", name: "Kreuzkümmel, gemahlen" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Den Couscous in eine Schüssel geben, mit der heißen Brühe übergießen, abdecken und 5 Minuten quellen lassen. Danach mit einer Gabel auflockern, damit er nicht klumpt.",
+      "Die Kichererbsen in einem Sieb abspülen und abtropfen lassen.",
+      "Paprika und Gurke klein würfeln, die Petersilie fein hacken.",
+      "Olivenöl, Zitronensaft, Kreuzkümmel, Salz und Pfeffer verrühren.",
+      "Alles mit dem Couscous mischen und kurz durchziehen lassen. Der Salat schmeckt warm und kalt."
+    ] },
+
+  { name: "Pfannkuchen mit Apfelmus", emoji: "🍏", bild: "", link: "",
+    kcal: 560, protein: 18, portionen: 2,
+    arbeitszeit: 10, kochzeit: 15, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 150, einheit: "g", name: "Weizenmehl" },
+      { menge: 2, einheit: "", name: "Eier" },
+      { menge: 250, einheit: "ml", name: "Milch (1,5 % Fett)" },
+      { menge: 1, einheit: "EL", name: "Zucker" },
+      { menge: 2, einheit: "TL", name: "Rapsöl" },
+      { menge: 200, einheit: "g", name: "Apfelmus" },
+      { menge: 0.5, einheit: "TL", name: "Zimt" },
+      { menge: null, einheit: "1 Prise", name: "Salz" }
+    ],
+    schritte: [
+      "Mehl, Zucker und Salz in einer Schüssel mischen. Eier und die Hälfte der Milch dazugeben und mit dem Schneebesen glatt rühren. Dann die restliche Milch nach und nach einrühren. So entstehen keine Klümpchen.",
+      "Eine beschichtete Pfanne bei mittlerer Hitze erhitzen und mit etwas Öl auspinseln.",
+      "Eine kleine Kelle Teig hineingeben und die Pfanne schwenken, bis der Boden dünn bedeckt ist.",
+      "Ca. 1–2 Minuten backen, bis die Unterseite goldbraun ist und sich der Rand löst. Wenden und eine weitere Minute backen.",
+      "Mit dem übrigen Teig genauso verfahren. Die Pfannkuchen mit Apfelmus bestreichen, mit Zimt bestäuben und aufrollen."
+    ] },
+
+  { name: "Milchreis mit Zimt & Zucker", emoji: "🍚", bild: "", link: "",
+    kcal: 395, protein: 13, portionen: 2,
+    arbeitszeit: 5, kochzeit: 35, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 125, einheit: "g", name: "Milchreis (Rundkornreis)" },
+      { menge: 500, einheit: "ml", name: "Milch (1,5 % Fett)" },
+      { menge: 1, einheit: "TL", name: "Butter" },
+      { menge: 2, einheit: "EL", name: "Zucker" },
+      { menge: 1, einheit: "TL", name: "Zimt" },
+      { menge: null, einheit: "1 Prise", name: "Salz" }
+    ],
+    schritte: [
+      "Milch, Butter und Salz in einem Topf aufkochen. Dabei danebenstehen, denn Milch kocht schnell über.",
+      "Den Reis einrühren und die Hitze auf die kleinste Stufe stellen.",
+      "Zugedeckt ca. 30–35 Minuten quellen lassen und alle 5 Minuten umrühren, damit nichts am Boden ansetzt. Der Milchreis ist fertig, wenn die Körner weich sind und er cremig ist.",
+      "Zucker und Zimt mischen und über den warmen Milchreis streuen."
+    ] },
+
+  { name: "Erbsen-Risotto mit Parmesan", emoji: "🫛", bild: "", link: "",
+    kcal: 570, protein: 16, portionen: 2,
+    arbeitszeit: 10, kochzeit: 25, ruhezeit: 0, schwierigkeit: "normal",
+    zutaten: [
+      { menge: 160, einheit: "g", name: "Risottoreis (z. B. Arborio)" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 2, einheit: "EL", name: "Butter" },
+      { menge: 100, einheit: "ml", name: "Weißwein (oder mehr Brühe)" },
+      { menge: 800, einheit: "ml", name: "heiße Gemüsebrühe" },
+      { menge: 150, einheit: "g", name: "Erbsen (TK)" },
+      { menge: 40, einheit: "g", name: "Parmesan" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Die Zwiebel schälen und sehr fein würfeln. Die Brühe in einem zweiten Topf heiß halten.",
+      "1 EL Butter in einem Topf schmelzen und die Zwiebel darin 3 Minuten glasig dünsten. Den Reis dazugeben und 1–2 Minuten unter Rühren anschwitzen, bis die Körner leicht glasig werden.",
+      "Mit dem Weißwein ablöschen und rühren, bis er fast verkocht ist.",
+      "Eine Kelle heiße Brühe dazugeben und unter häufigem Rühren köcheln lassen, bis sie aufgesogen ist. Dann die nächste Kelle zugeben. So weitermachen, insgesamt ca. 18–20 Minuten.",
+      "5 Minuten vor Ende die gefrorenen Erbsen unterrühren.",
+      "Der Reis ist fertig, wenn er cremig ist, aber im Kern noch leichten Biss hat. Topf vom Herd nehmen, restliche Butter und geriebenen Parmesan unterrühren und mit Salz und Pfeffer abschmecken."
+    ] },
+
+  { name: "Gefüllte Paprika", emoji: "🫑", bild: "", link: "",
+    kcal: 430, protein: 29, portionen: 4,
+    arbeitszeit: 20, kochzeit: 40, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 4, einheit: "", name: "rote Paprika" },
+      { menge: 400, einheit: "g", name: "Rinderhackfleisch" },
+      { menge: 80, einheit: "g", name: "Langkornreis" },
+      { menge: 1, einheit: "", name: "Zwiebel" },
+      { menge: 400, einheit: "g", name: "passierte Tomaten" },
+      { menge: 1, einheit: "TL", name: "Paprikapulver, edelsüß" },
+      { menge: 1, einheit: "TL", name: "getrockneter Oregano" },
+      { menge: 80, einheit: "g", name: "geriebener Gouda" },
+      { menge: null, einheit: "etwas", name: "Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Den Reis nach Packungsanweisung ca. 10 Minuten vorkochen (er gart im Ofen weiter) und abgießen. Den Ofen auf 180 °C Ober-/Unterhitze vorheizen.",
+      "Von den Paprika einen Deckel abschneiden und die Kerne und weißen Trennwände herauslösen.",
+      "Die Zwiebel fein würfeln und mit Hackfleisch, Reis, Paprikapulver, Salz und Pfeffer in einer Schüssel gut verkneten.",
+      "Die Paprika mit der Masse füllen und aufrecht in eine Auflaufform stellen. Die Tomaten mit Oregano und Salz verrühren und um die Paprika herum gießen.",
+      "Die Deckel auflegen und ca. 30 Minuten backen. Dann Deckel abnehmen, Käse auf die Füllung streuen und weitere 10 Minuten backen, bis er geschmolzen ist.",
+      "Die Paprika mit der Tomatensoße aus der Form servieren."
+    ] },
+
+  { name: "Ofenkartoffel mit Kräuterquark", emoji: "🥔", bild: "", link: "",
+    kcal: 440, protein: 25, portionen: 2,
+    arbeitszeit: 10, kochzeit: 60, ruhezeit: 0, schwierigkeit: "simpel",
+    zutaten: [
+      { menge: 800, einheit: "g", name: "große Kartoffeln, mehligkochend" },
+      { menge: 1, einheit: "EL", name: "Olivenöl" },
+      { menge: 250, einheit: "g", name: "Magerquark" },
+      { menge: 100, einheit: "g", name: "Naturjoghurt" },
+      { menge: 1, einheit: "Bund", name: "gemischte Kräuter (z. B. Schnittlauch, Petersilie)" },
+      { menge: 1, einheit: "", name: "Knoblauchzehe" },
+      { menge: null, einheit: "etwas", name: "grobes Salz und Pfeffer" }
+    ],
+    schritte: [
+      "Den Ofen auf 200 °C Ober-/Unterhitze vorheizen.",
+      "Die Kartoffeln gründlich unter Wasser abbürsten, trocken reiben und mit einer Gabel mehrmals einstechen, damit sie im Ofen nicht platzen.",
+      "Mit Öl einreiben, mit grobem Salz bestreuen und direkt auf den Rost (mit Backblech darunter) legen. Ca. 60 Minuten backen. Sie sind fertig, wenn ein Messer ohne Widerstand hineingleitet.",
+      "Inzwischen die Kräuter fein hacken und den Knoblauch fein reiben. Mit Quark und Joghurt glatt rühren und mit Salz und Pfeffer würzen.",
+      "Die Kartoffeln längs einschneiden, leicht aufdrücken und den Kräuterquark hineingeben."
+    ] }
+];
+
+// ============================================================
+// 2. SPIELZUSTAND
+// ============================================================
+const START_LEBEN = 3;
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+let namen = ["Anna", "Ben"];
+// line: Einträge auf dem Zeitstrahl → { g: Gericht, von: Name oder null, richtig: true/false/null }
+const state = { players: [], rounds: 5, deck: [], line: [], turn: 0, current: null, lastDish: null };
+let drag = null;
+const rezeptAnsicht = { g: null, portionen: 2 };
+
+// ============================================================
+// 3. HILFSFUNKTIONEN
+// ============================================================
+const $ = id => document.getElementById(id);
+function wert(r) { return r.protein / r.kcal * 100; }
+function fmt(v) { return v.toFixed(1).replace(".", ","); }
+function farbe(r) {
+  const t = Math.min(Math.max(wert(r) / 14, 0), 1);
+  return "hsl(" + ((42 - t * 59 + 360) % 360) + " 90% 58%)";
+}
+function esc(t) {
+  return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+}
+function mischen(liste) {
+  const k = liste.slice();
+  for (let i = k.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    const tmp = k[i]; k[i] = k[j]; k[j] = tmp;
+  }
+  return k;
+}
+function aktiv(p) { return p.leben > 0 && p.zuege < state.rounds; }
+function zeige(id) { ["setup", "game", "end"].forEach(s => { $(s).hidden = (s !== id); }); }
+
+function zeit(min) {
+  if (min < 60) return min + " Min.";
+  const h = Math.floor(min / 60), m = min % 60;
+  return h + " Std." + (m ? " " + m + " Min." : "");
+}
+
+// Zahl als Bruch anzeigen: 1.5 → "1 ½"
+function bruch(v) {
+  const ganz = Math.floor(v + 1e-9);
+  const rest = v - ganz;
+  const teile = [[0, ""], [0.25, "¼"], [1 / 3, "⅓"], [0.5, "½"], [2 / 3, "⅔"], [0.75, "¾"], [1, ""]];
+  let best = teile[0];
+  teile.forEach(t => { if (Math.abs(rest - t[0]) < Math.abs(rest - best[0])) best = t; });
+  const g = ganz + (best[0] === 1 ? 1 : 0);
+  const f = best[0] === 1 ? "" : best[1];
+  if (g === 0 && !f) return "¼";
+  return (g ? g : "") + (g && f ? " " : "") + f;
+}
+
+function mengeText(z, faktor) {
+  if (z.menge === null) return z.einheit;
+  const v = z.menge * faktor;
+  let zahl;
+  if (z.einheit === "g" || z.einheit === "ml") zahl = v >= 20 ? String(Math.round(v / 5) * 5) : String(Math.round(v));
+  else zahl = bruch(v);
+  return zahl + (z.einheit ? " " + z.einheit : "");
+}
+
+// ============================================================
+// 4. STARTBILDSCHIRM
+// ============================================================
+$("rulesToggle").addEventListener("click", () => {
+  const oeffnen = $("rules").hidden;
+  $("rules").hidden = !oeffnen;
+  $("rulesToggle").setAttribute("aria-expanded", String(oeffnen));
+  $("rulesToggle").setAttribute("aria-label", oeffnen ? "Spielregeln ausblenden" : "Spielregeln anzeigen");
+});
+
+function renderChips() {
+  $("playerChips").innerHTML = namen.map((n, i) =>
+    '<span class="chip">' + esc(n) +
+    '<button data-i="' + i + '" aria-label="' + esc(n) + ' entfernen">×</button></span>'
+  ).join("");
+}
+function fehler(text) { $("setupError").textContent = text; $("setupError").hidden = !text; }
+function nameHinzufuegen() {
+  const v = $("nameInput").value.trim();
+  if (!v) return;
+  if (namen.length >= 8) { fehler("Es können höchstens 8 Personen mitspielen."); return; }
+  namen.push(v);
+  $("nameInput").value = "";
+  fehler("");
+  renderChips();
+  $("nameInput").focus();
+}
+function setRounds(n) { state.rounds = Math.min(15, Math.max(1, n)); $("roundsOut").textContent = state.rounds; }
+
+$("addBtn").addEventListener("click", nameHinzufuegen);
+$("nameInput").addEventListener("keydown", e => { if (e.key === "Enter") nameHinzufuegen(); });
+$("playerChips").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  namen.splice(Number(b.dataset.i), 1);
+  renderChips();
+});
+$("minusBtn").addEventListener("click", () => setRounds(state.rounds - 1));
+$("plusBtn").addEventListener("click", () => setRounds(state.rounds + 1));
+$("startBtn").addEventListener("click", spielStarten);
+
+// ============================================================
+// 5. SPIELABLAUF
+// ============================================================
+function spielStarten() {
+  if (namen.length === 0) { fehler("Füge mindestens eine Person hinzu."); return; }
+  fehler("");
+  state.players = namen.map(n => ({ name: n, punkte: 0, leben: START_LEBEN, zuege: 0 }));
+  state.deck = mischen(REZEPTE);
+  state.line = [{ g: state.deck.pop(), von: null, richtig: null }];
+  state.turn = 0;
+  zeige("game");
+  naechsterZug();
+}
+
+function naechsterZug() {
+  if (!state.players.some(aktiv) || state.deck.length === 0) { spielEnde(); return; }
+  for (let i = 0; i < state.players.length; i++) {
+    if (aktiv(state.players[state.turn])) break;
+    state.turn = (state.turn + 1) % state.players.length;
+  }
+  state.current = state.deck.pop();
+  renderZeitstrahl();
+  renderPunkte();
+  renderHand();
+  $("resultSheet").hidden = true;
+  $("handArea").hidden = false;
+}
+
+function einordnen(idx) {
+  const g = state.current;
+  const p = state.players[state.turn];
+  const links = state.line[idx - 1];
+  const rechts = state.line[idx];
+  const richtig = (!links || wert(links.g) <= wert(g)) && (!rechts || wert(g) <= wert(rechts.g));
+
+  p.zuege++;
+  let pos = idx;
+  if (richtig) {
+    p.punkte++;
+  } else {
+    p.leben--;
+    pos = state.line.findIndex(e => wert(e.g) > wert(g));
+    if (pos === -1) pos = state.line.length;
+  }
+  state.line.splice(pos, 0, { g: g, von: p.name, richtig: richtig });
+
+  renderZeitstrahl(pos, richtig ? "good" : "bad");
+  renderPunkte();
+  $("cards").children[pos].scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", inline: "center", block: "nearest" });
+  ergebnisZeigen(g, richtig, p);
+}
+
+function ergebnisZeigen(g, richtig, p) {
+  state.lastDish = g;
+  $("handArea").hidden = true;
+  $("resultSheet").hidden = false;
+  $("resultSheet").className = "sheet " + (richtig ? "good" : "bad");
+
+  if (richtig) $("resultTitle").textContent = "Richtig eingeordnet, +1 Punkt";
+  else if (p.leben === 0) $("resultTitle").textContent = "Daneben, " + p.name + " ist raus";
+  else $("resultTitle").textContent = "Daneben, ein Leben weniger";
+
+  $("resultText").textContent = g.name + " liefert " + fmt(wert(g)) + " g Protein pro 100 kcal." +
+    (richtig ? "" : " Die Karte liegt jetzt an der richtigen Stelle.");
+
+  const naechste = naechstePerson();
+  $("nextBtn").textContent = naechste ? "Weiter: " + naechste.name + " ist dran" : "Ergebnis ansehen";
+  $("nextBtn").focus({ preventScroll: true });
+}
+
+function naechstePerson() {
+  if (state.deck.length === 0) return null;
+  for (let k = 1; k <= state.players.length; k++) {
+    const p = state.players[(state.turn + k) % state.players.length];
+    if (aktiv(p)) return p;
+  }
+  return null;
+}
+
+$("nextBtn").addEventListener("click", () => {
+  state.turn = (state.turn + 1) % state.players.length;
+  naechsterZug();
+});
+$("recipeBtn").addEventListener("click", () => rezeptOeffnen(state.lastDish));
+
+// ============================================================
+// 6. SPIELENDE MIT SIEGERPODEST
+// ============================================================
+function punkteText(n) { return n + (n === 1 ? " Punkt" : " Punkte"); }
+
+function spielEnde() {
+  zeige("end");
+  const s = state.players.slice().sort((a, b) => b.punkte - a.punkte);
+  const sieger = s.filter(p => p.punkte === s[0].punkte);
+
+  if (s.length === 1) {
+    $("winner").textContent = punkteText(s[0].punkte);
+    $("winnerSub").textContent = "Stark geschätzt, " + s[0].name + ".";
+  } else if (sieger.length > 1) {
+    $("winner").textContent = "Unentschieden";
+    $("winnerSub").textContent = sieger.map(p => p.name).join(" und ") + " haben je " + punkteText(s[0].punkte) + ".";
+  } else {
+    $("winner").textContent = s[0].name + " gewinnt";
+    $("winnerSub").textContent = "mit " + punkteText(s[0].punkte);
+  }
+
+  // Podest: Reihenfolge 2. – 1. – 3.
+  const reihenfolge = [1, 0, 2].filter(i => i < s.length);
+  $("podium").innerHTML = reihenfolge.map(i => {
+    const p = s[i];
+    return '<div class="pod p' + (i + 1) + '">' +
+      (i === 0 ? '<span class="crown" aria-hidden="true">👑</span>' : '') +
+      '<span class="avatar" aria-hidden="true">' + esc(p.name.charAt(0).toUpperCase()) + '</span>' +
+      '<span class="pod-name">' + esc(p.name) + '</span>' +
+      '<span class="pod-pts">' + punkteText(p.punkte) + '</span>' +
+      '<div class="block">' + (i + 1) + '</div></div>';
+  }).join("");
+
+  // Plätze ab 4
+  $("ranking").innerHTML = s.slice(3).map((p, i) =>
+    '<li><span class="place">' + (i + 4) + '</span><span class="rname">' + esc(p.name) +
+    '</span><span class="rpts">' + punkteText(p.punkte) + '</span></li>'
+  ).join("");
+
+  feuerwerkStarten();
+}
+
+$("againBtn").addEventListener("click", () => { feuerwerkStoppen(); zeige("setup"); });
+
+// ---------- Feuerwerk ----------
+const fw = { ctx: null, raf: 0, rockets: [], parts: [], start: 0, next: 0, w: 0, h: 0 };
+const FW_FARBEN = ["#FFC23D", "#FF8A4C", "#E23D6D", "#FFFFFF", "#7FD6FF", "#A6F07A"];
+
+function fwGroesse() {
+  const c = $("fireworks");
+  const dpr = window.devicePixelRatio || 1;
+  fw.w = window.innerWidth; fw.h = window.innerHeight;
+  c.width = fw.w * dpr; c.height = fw.h * dpr;
+  fw.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+function feuerwerkStarten() {
+  if (reduceMotion) return;
+  fw.ctx = $("fireworks").getContext("2d");
+  fwGroesse();
+  window.addEventListener("resize", fwGroesse);
+  fw.rockets = []; fw.parts = [];
+  fw.start = performance.now(); fw.next = 0;
+  cancelAnimationFrame(fw.raf);
+  fw.raf = requestAnimationFrame(fwTick);
+}
+
+function feuerwerkStoppen() {
+  cancelAnimationFrame(fw.raf);
+  window.removeEventListener("resize", fwGroesse);
+  if (fw.ctx) fw.ctx.clearRect(0, 0, fw.w, fw.h);
+}
+
+function fwExplosion(x, y, farbe) {
+  const anzahl = 70 + Math.floor(Math.random() * 40);
+  for (let i = 0; i < anzahl; i++) {
+    const winkel = Math.random() * Math.PI * 2;
+    const tempo = 1 + Math.random() * 4.5;
+    fw.parts.push({
+      x: x, y: y, vx: Math.cos(winkel) * tempo, vy: Math.sin(winkel) * tempo,
+      leben: 1, abbau: 0.010 + Math.random() * 0.012,
+      farbe: Math.random() < 0.8 ? farbe : "#FFFFFF"
+    });
+  }
+}
+
+function fwTick(t) {
+  const ctx = fw.ctx;
+  // alte Spuren langsam ausblenden
+  ctx.globalCompositeOperation = "destination-out";
+  ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
+  ctx.fillRect(0, 0, fw.w, fw.h);
+  ctx.globalCompositeOperation = "lighter";
+
+  const laeuft = t - fw.start < 9000;
+  if (laeuft && t > fw.next) {
+    fw.rockets.push({
+      x: fw.w * (0.15 + Math.random() * 0.7), y: fw.h,
+      vx: (Math.random() - 0.5) * 1.6,
+      vy: -Math.sqrt(0.24 * fw.h * (0.45 + Math.random() * 0.3)),
+      farbe: FW_FARBEN[Math.floor(Math.random() * FW_FARBEN.length)]
+    });
+    fw.next = t + 300 + Math.random() * 450;
+  }
+
+  fw.rockets = fw.rockets.filter(r => {
+    r.x += r.vx; r.y += r.vy; r.vy += 0.12;
+    ctx.fillStyle = r.farbe;
+    ctx.beginPath(); ctx.arc(r.x, r.y, 2.2, 0, Math.PI * 2); ctx.fill();
+    if (r.vy >= -0.5) { fwExplosion(r.x, r.y, r.farbe); return false; }
+    return true;
+  });
+
+  fw.parts = fw.parts.filter(p => {
+    p.x += p.vx; p.y += p.vy;
+    p.vx *= 0.985; p.vy = p.vy * 0.985 + 0.05;
+    p.leben -= p.abbau;
+    if (p.leben <= 0) return false;
+    ctx.globalAlpha = p.leben;
+    ctx.fillStyle = p.farbe;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+    return true;
+  });
+
+  if (laeuft || fw.rockets.length || fw.parts.length) fw.raf = requestAnimationFrame(fwTick);
+  else ctx.clearRect(0, 0, fw.w, fw.h);
+}
+
+// ============================================================
+// 7. ANZEIGE
+// ============================================================
+function renderPunkte() {
+  $("scoreboard").innerHTML = state.players.map((p, i) => {
+    let herzen = "";
+    for (let h = 0; h < START_LEBEN; h++) herzen += '<i class="' + (h < p.leben ? "on" : "") + '"></i>';
+    const cls = "pchip" + (i === state.turn ? " active" : "") + (p.leben === 0 ? " out" : "");
+    return '<div class="' + cls + '"><span class="pname">' + esc(p.name) + '</span>' +
+      '<span class="lives" aria-label="' + p.leben + ' Leben">' + herzen + '</span>' +
+      '<span class="pts" aria-label="' + p.punkte + ' Punkte">' + p.punkte + '</span></div>';
+  }).join("");
+}
+
+function renderHand() {
+  const g = state.current;
+  $("turnText").textContent = state.players[state.turn].name + " ist dran";
+  $("handCard").innerHTML =
+    '<span class="emoji">' + g.emoji + '</span>' +
+    '<strong>' + esc(g.name) + '</strong>' +
+    '<span class="ingr">' + g.zutaten.filter(z => z.menge !== null).map(z => esc(z.name)).join(", ") + '</span>';
+}
+
+function renderZeitstrahl(markIdx, markCls) {
+  const c = $("cards");
+  c.innerHTML = "";
+  state.line.forEach((e, i) => {
+    const g = e.g;
+    let badge;
+    if (e.von === null) badge = '<span class="tby">Startkarte</span>';
+    else if (e.richtig) badge = '<span class="tby ok" title="' + esc(e.von) + ' hat richtig eingeordnet">✓ ' + esc(e.von) + '</span>';
+    else badge = '<span class="tby no" title="' + esc(e.von) + ' hat falsch eingeordnet">✗ ' + esc(e.von) + '</span>';
+
+    const b = document.createElement("button");
+    b.className = "tcard" + (e.richtig === false ? " wrong" : "") + (i === markIdx ? " " + markCls : "");
+    b.style.setProperty("--c", farbe(g));
+    b.setAttribute("aria-label", g.name + ", " + fmt(wert(g)) + " g Protein pro 100 kcal. Rezept ansehen");
+    b.innerHTML =
+      '<span class="emoji">' + g.emoji + '</span>' +
+      '<span class="tname">' + esc(g.name) + '</span>' +
+      '<span class="tval"><b>' + fmt(wert(g)) + '</b>g / 100 kcal</span>' +
+      badge;
+    b.addEventListener("click", () => rezeptOeffnen(g));
+    c.appendChild(b);
+  });
+}
+
+// ============================================================
+// 8. DRAG & DROP (funktioniert mit Maus und Touch)
+// ============================================================
+const hand = $("handCard");
+
+hand.addEventListener("pointerdown", e => {
+  if ($("handArea").hidden) return;
+  e.preventDefault();
+  const r = hand.getBoundingClientRect();
+  const ghost = hand.cloneNode(true);
+  ghost.removeAttribute("id");
+  ghost.classList.add("ghost");
+  ghost.style.width = r.width + "px";
+  document.body.appendChild(ghost);
+  hand.classList.add("lifted");
+
+  const gap = document.createElement("div");
+  gap.className = "gap";
+
+  drag = { ghost: ghost, gap: gap, offX: e.clientX - r.left, offY: e.clientY - r.top,
+           x: e.clientX, y: e.clientY, index: null, raf: 0 };
+  geisterBewegen();
+  window.addEventListener("pointermove", ziehen);
+  window.addEventListener("pointerup", loslassen);
+  window.addEventListener("pointercancel", loslassen);
+  drag.raf = requestAnimationFrame(autoScroll);
+});
+
+function geisterBewegen() {
+  drag.ghost.style.transform =
+    "translate(" + (drag.x - drag.offX) + "px," + (drag.y - drag.offY) + "px) rotate(-4deg)";
+}
+
+function ziehen(e) {
+  drag.x = e.clientX;
+  drag.y = e.clientY;
+  geisterBewegen();
+  lueckeAktualisieren();
+}
+
+function ueberZeitstrahl() {
+  const r = $("track").getBoundingClientRect();
+  return drag.x > r.left && drag.x < r.right && drag.y > r.top - 30 && drag.y < r.bottom + 20;
+}
+
+function lueckeAktualisieren() {
+  if (!ueberZeitstrahl()) {
+    if (drag.gap.parentNode) drag.gap.remove();
+    drag.index = null;
+    return;
+  }
+  const karten = Array.from($("cards").querySelectorAll(".tcard"));
+  let idx = karten.length;
+  for (let i = 0; i < karten.length; i++) {
+    const r = karten[i].getBoundingClientRect();
+    if (drag.x < r.left + r.width / 2) { idx = i; break; }
+  }
+  if (idx !== drag.index) {
+    drag.index = idx;
+    $("cards").insertBefore(drag.gap, karten[idx] || null);
+  }
+}
+
+function autoScroll() {
+  if (!drag) return;
+  if (ueberZeitstrahl()) {
+    const t = $("track");
+    const r = t.getBoundingClientRect();
+    if (drag.x < r.left + 70) t.scrollLeft -= 12;
+    else if (drag.x > r.right - 70) t.scrollLeft += 12;
+    lueckeAktualisieren();
+  }
+  drag.raf = requestAnimationFrame(autoScroll);
+}
+
+function loslassen() {
+  window.removeEventListener("pointermove", ziehen);
+  window.removeEventListener("pointerup", loslassen);
+  window.removeEventListener("pointercancel", loslassen);
+  cancelAnimationFrame(drag.raf);
+  const idx = ueberZeitstrahl() ? drag.index : null;
+  drag.ghost.remove();
+  if (drag.gap.parentNode) drag.gap.remove();
+  hand.classList.remove("lifted");
+  drag = null;
+  if (idx !== null) einordnen(idx);
+}
+
+// ============================================================
+// 9. REZEPT-FENSTER
+// ============================================================
+const ICONS = {
+  uhr: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  flamme: '<path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 1.6 1 2.5 2 3 0-3-.5-5.5.5-8z"/>',
+  sanduhr: '<path d="M7 3h10M7 21h10M8 3v3l4 6-4 6v3M16 3v3l-4 6 4 6v3"/>',
+  stoppuhr: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4M10 2h4M18.5 6.5L20 5"/>',
+  blitz: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  hantel: '<path d="M6 7v10M18 7v10M3 10v4M21 10v4M6 12h12"/>'
+};
+function icon(name) { return '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[name] + '</svg>'; }
+function stufenIcon(stufe) {
+  const n = { simpel: 1, normal: 2, pfiffig: 3 }[stufe] || 1;
+  let s = '<svg viewBox="0 0 24 24" aria-hidden="true">';
+  [[4, 14, 6], [10, 10, 10], [16, 6, 14]].forEach((b, i) => {
+    s += '<rect x="' + b[0] + '" y="' + b[1] + '" width="4" height="' + b[2] + '" rx="1"' + (i < n ? ' class="on"' : '') + '/>';
+  });
+  return s + '</svg>';
+}
+function metaPunkt(svg, label, value) {
+  return '<li>' + svg + '<div><span>' + label + '</span><strong>' + value + '</strong></div></li>';
+}
+
+function rezeptOeffnen(g) {
+  if (drag || !g) return;
+  rezeptAnsicht.g = g;
+  rezeptAnsicht.portionen = g.portionen;
+
+  $("rHero").style.setProperty("--c", farbe(g));
+  const media = $("rMedia");
+  media.innerHTML = '<span class="hero-emoji">' + g.emoji + '</span>';
+  if (g.bild) {
+    const img = new Image();
+    img.alt = g.name;
+    img.onload = () => { if (rezeptAnsicht.g === g) { media.innerHTML = ""; media.appendChild(img); } };
+    img.src = g.bild;
+  }
+  $("rBadge").innerHTML = '<b>' + fmt(wert(g)) + ' g</b> Protein pro 100 kcal';
+
+  $("rTitle").textContent = g.name;
+
+  const gesamt = g.arbeitszeit + g.kochzeit + g.ruhezeit;
+  let meta = metaPunkt(icon("uhr"), "Arbeitszeit", zeit(g.arbeitszeit));
+  if (g.kochzeit) meta += metaPunkt(icon("flamme"), "Koch-/Backzeit", zeit(g.kochzeit));
+  if (g.ruhezeit) meta += metaPunkt(icon("sanduhr"), "Ruhezeit", zeit(g.ruhezeit));
+  meta += metaPunkt(icon("stoppuhr"), "Gesamtzeit", zeit(gesamt));
+  meta += metaPunkt(stufenIcon(g.schwierigkeit), "Schwierigkeit", g.schwierigkeit);
+  meta += metaPunkt(icon("blitz"), "Kalorien p. P.", g.kcal + " kcal");
+  meta += metaPunkt(icon("hantel"), "Protein p. P.", g.protein + " g");
+  $("rMeta").innerHTML = meta;
+
+  $("rSteps").innerHTML = g.schritte.map(s => '<li>' + esc(s) + '</li>').join("");
+  zutatenZeigen();
+
+  if (g.link) { $("rLink").href = g.link; $("rLink").hidden = false; }
+  else $("rLink").hidden = true;
+
+  $("recipe").hidden = false;
+  document.querySelector("#recipe .modal-panel").scrollTop = 0;
+  document.querySelector("#recipe .close").focus();
+}
+
+function zutatenZeigen() {
+  const g = rezeptAnsicht.g;
+  const p = rezeptAnsicht.portionen;
+  const faktor = p / g.portionen;
+  $("pOut").textContent = p + (p === 1 ? " Portion" : " Portionen");
+  $("pMinus").disabled = p <= 1;
+  $("pPlus").disabled = p >= 12;
+  $("rIngr").innerHTML = g.zutaten.map(z =>
+    '<li><b>' + esc(mengeText(z, faktor)) + '</b><span>' + esc(z.name) + '</span></li>'
+  ).join("");
+}
+
+$("pMinus").addEventListener("click", () => {
+  if (rezeptAnsicht.portionen > 1) { rezeptAnsicht.portionen--; zutatenZeigen(); }
+});
+$("pPlus").addEventListener("click", () => {
+  if (rezeptAnsicht.portionen < 12) { rezeptAnsicht.portionen++; zutatenZeigen(); }
+});
+
+function rezeptSchliessen() { $("recipe").hidden = true; }
+document.querySelectorAll("[data-close]").forEach(el => el.addEventListener("click", rezeptSchliessen));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("recipe").hidden) rezeptSchliessen(); });
+
+// Start
+renderChips();
+setRounds(5);
+</script>
+
+</body>
+</html>
